@@ -24,26 +24,40 @@ type TeacherPupilRow = LearnerProfile & {
   progressPercent: number;
   quizCompletedCount: number;
   screenshotCount: number;
+  masteredCount: number;
+  averageQuizPercent: number;
   status: "good" | "partial" | "not-started";
   hasAnyActivity: boolean;
   completedLessonIds: number[];
   quizMap: QuizMap;
 };
 
-type SortMode = "name" | "progress";
+type SortMode = "name" | "progress" | "mastery";
 type ActivityFilter = "all" | "active" | "not-started";
 
-const CLASS_OPTIONS = [
-  "Year 6 Elder",
-  "Year 6 Juniper",
-  "Year Walnut",
-  ];
+const CLASS_OPTIONS = ["Year 6 Elder", "Year 6 Juniper", "Year 6 Walnut"];
+
+const LESSON_TITLES = [
+  "Variables in Games",
+  "Setting and Changing Variables",
+  "Using a Variable for Score",
+  "Using a Variable for Lives",
+  "Variables with Conditions",
+  "Designing a Variable-Based Game",
+  "Debugging Variables",
+  "Introduction to Micro:bit",
+  "Selection and Flow in MakeCode",
+  "Sensing Inputs",
+  "Variables and Logic in MakeCode",
+  "Designing a Step Counter",
+];
 
 const REGISTRY_KEY = "year6-pupil-registry";
 const CURRENT_PROFILE_KEY = "year6-current-profile";
 const TEACHER_UNLOCKED_KEY = "year6-teacher-unlocked";
 const TEACHER_PASSWORD = "APSR2026";
 const TOTAL_LESSONS = 12;
+const QUIZ_QUESTIONS_PER_LESSON = 10;
 
 const pastel = {
   page: "#f8fafc",
@@ -101,7 +115,9 @@ function safeParseArray(raw: string | null): number[] {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((value) => Number.isInteger(value))
+      : [];
   } catch {
     return [];
   }
@@ -141,10 +157,7 @@ function getProfileStorage(profile: LearnerProfile) {
       ? localStorage.getItem(`${profile.storageKey}-screenshots`)
       : null;
 
-  const completedLessonIds = safeParseArray(progressRaw)
-    .filter((value) => Number.isInteger(value))
-    .sort((a, b) => a - b);
-
+  const completedLessonIds = safeParseArray(progressRaw).sort((a, b) => a - b);
   const quizMap = safeParseQuizMap(quizRaw);
   const screenshots = safeParseScreenshotMap(screenshotsRaw);
 
@@ -159,17 +172,30 @@ function buildTeacherRow(profile: LearnerProfile): TeacherPupilRow {
   const { completedLessonIds, quizMap, screenshots } = getProfileStorage(profile);
 
   const completedLessons = completedLessonIds.length;
-  const quizCompletedCount = Object.values(quizMap).filter(
-    (item) => item?.submitted
-  ).length;
+  const submittedQuizzes = Object.values(quizMap).filter((item) => item?.submitted);
+  const quizCompletedCount = submittedQuizzes.length;
   const screenshotCount = Object.keys(screenshots).length;
   const progressPercent = Math.round((completedLessons / TOTAL_LESSONS) * 100);
+
+  const masteredCount = submittedQuizzes.filter(
+    (item) => item.score / QUIZ_QUESTIONS_PER_LESSON >= 0.8
+  ).length;
+
+  const averageQuizPercent =
+    quizCompletedCount === 0
+      ? 0
+      : Math.round(
+          submittedQuizzes.reduce(
+            (sum, item) => sum + (item.score / QUIZ_QUESTIONS_PER_LESSON) * 100,
+            0
+          ) / quizCompletedCount
+        );
 
   const hasAnyActivity =
     completedLessons > 0 || quizCompletedCount > 0 || screenshotCount > 0;
 
   let status: TeacherPupilRow["status"] = "not-started";
-  if (progressPercent >= 70) status = "good";
+  if (progressPercent >= 70 || masteredCount >= 6) status = "good";
   else if (progressPercent > 0 || hasAnyActivity) status = "partial";
 
   return {
@@ -179,6 +205,8 @@ function buildTeacherRow(profile: LearnerProfile): TeacherPupilRow {
     progressPercent,
     quizCompletedCount,
     screenshotCount,
+    masteredCount,
+    averageQuizPercent,
     status,
     hasAnyActivity,
     completedLessonIds,
@@ -225,6 +253,35 @@ function statusConfig(status: TeacherPupilRow["status"]) {
     ring: "#f43f5e",
     cardBorder: "#fecdd3",
     cardGlow: "0 10px 30px rgba(244, 63, 94, 0.1)",
+  };
+}
+
+function getQuizBadge(score: number) {
+  const percent = Math.round((score / QUIZ_QUESTIONS_PER_LESSON) * 100);
+
+  if (percent >= 80) {
+    return {
+      label: `Mastered • ${score}/${QUIZ_QUESTIONS_PER_LESSON}`,
+      bg: "#dcfce7",
+      border: "#86efac",
+      text: "#166534",
+    };
+  }
+
+  if (percent >= 60) {
+    return {
+      label: `Secure • ${score}/${QUIZ_QUESTIONS_PER_LESSON}`,
+      bg: "#fef3c7",
+      border: "#fcd34d",
+      text: "#92400e",
+    };
+  }
+
+  return {
+    label: `Review • ${score}/${QUIZ_QUESTIONS_PER_LESSON}`,
+    bg: "#fee2e2",
+    border: "#fca5a5",
+    text: "#b91c1c",
   };
 }
 
@@ -349,6 +406,16 @@ export default function TeacherDashboardPage() {
         return a.studentName.localeCompare(b.studentName);
       }
 
+      if (sortMode === "mastery") {
+        if (b.masteredCount !== a.masteredCount) {
+          return b.masteredCount - a.masteredCount;
+        }
+        if (b.averageQuizPercent !== a.averageQuizPercent) {
+          return b.averageQuizPercent - a.averageQuizPercent;
+        }
+        return a.studentName.localeCompare(b.studentName);
+      }
+
       return a.studentName.localeCompare(b.studentName);
     });
 
@@ -372,12 +439,20 @@ export default function TeacherDashboardPage() {
               total
           );
 
+    const averageMastery =
+      total === 0
+        ? 0
+        : Math.round(
+            selectedClassRows.reduce((sum, row) => sum + row.masteredCount, 0) / total
+          );
+
     return {
       total,
       active,
       notStarted,
       atRisk,
       averageProgress,
+      averageMastery,
     };
   }, [selectedClassRows]);
 
@@ -425,7 +500,7 @@ export default function TeacherDashboardPage() {
 
   const resetPupil = (profile: LearnerProfile) => {
     const confirmed = window.confirm(
-      `Reset all progress for this pupil?\n\n${profile.studentName} • ${profile.className}\n\nThis will clear progress, quiz results, and screenshots, but keep the pupil profile.`
+      `Reset all progress for this pupil?\n\n${profile.studentName} • ${profile.className}\n\nThis will clear progress, quiz results, quiz order, and screenshots, but keep the pupil profile.`
     );
 
     if (!confirmed) return;
@@ -515,7 +590,7 @@ export default function TeacherDashboardPage() {
                 color: pastel.title,
               }}
             >
-              Teacher Dashboard
+              Year 6 Teacher Dashboard
             </h1>
             <p style={{ fontSize: 20, margin: 0, maxWidth: 720 }}>
               Enter the teacher password to open the dashboard on this device.
@@ -628,7 +703,7 @@ export default function TeacherDashboardPage() {
       style={{
         padding: 32,
         fontFamily: "Inter, Arial, sans-serif",
-        maxWidth: 1520,
+        maxWidth: 1560,
         margin: "0 auto",
         background: pastel.page,
         color: pastel.text,
@@ -676,13 +751,13 @@ export default function TeacherDashboardPage() {
                 color: pastel.title,
               }}
             >
-              Teacher Dashboard
+              Year 6 Teacher Dashboard
             </h1>
 
-            <p style={{ fontSize: 20, margin: 0, maxWidth: 820 }}>
-              View pupils saved on this device, identify who is thriving or at
-              risk, reset pupil learning data without deleting profiles, and open
-              any pupil space instantly.
+            <p style={{ fontSize: 20, margin: 0, maxWidth: 860 }}>
+              View pupil progress for the Year 6 student app, including lesson
+              completion, quiz performance, mastery, screenshots, and quick access
+              back into any pupil profile.
             </p>
           </div>
 
@@ -806,59 +881,34 @@ export default function TeacherDashboardPage() {
             </div>
 
             <div style={{ display: "grid", gap: 10, fontSize: 15 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <span>Total pupils</span>
                 <strong>{classSummary.total}</strong>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <span>Active pupils</span>
                 <strong>{classSummary.active}</strong>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <span>Not started</span>
                 <strong>{classSummary.notStarted}</strong>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <span>At risk</span>
                 <strong>{classSummary.atRisk}</strong>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <span>Average progress</span>
                 <strong>{classSummary.averageProgress}%</strong>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                <span>Average mastery</span>
+                <strong>{classSummary.averageMastery}</strong>
               </div>
             </div>
           </div>
@@ -951,8 +1001,7 @@ export default function TeacherDashboardPage() {
                     sortMode === "name"
                       ? "1px solid #c4b5fd"
                       : `1px solid ${pastel.border}`,
-                  background:
-                    sortMode === "name" ? pastel.accentSoft : "#ffffff",
+                  background: sortMode === "name" ? pastel.accentSoft : "#ffffff",
                   color: pastel.title,
                   fontWeight: 700,
                   cursor: "pointer",
@@ -979,6 +1028,25 @@ export default function TeacherDashboardPage() {
               >
                 Progress
               </button>
+
+              <button
+                onClick={() => setSortMode("mastery")}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 999,
+                  border:
+                    sortMode === "mastery"
+                      ? "1px solid #c4b5fd"
+                      : `1px solid ${pastel.border}`,
+                  background:
+                    sortMode === "mastery" ? pastel.accentSoft : "#ffffff",
+                  color: pastel.title,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Mastery
+              </button>
             </div>
           </div>
         </aside>
@@ -987,7 +1055,7 @@ export default function TeacherDashboardPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
               gap: 18,
             }}
           >
@@ -1071,6 +1139,29 @@ export default function TeacherDashboardPage() {
               }}
             >
               <div style={{ fontSize: 14, color: "#64748b", marginBottom: 8 }}>
+                Avg Mastery
+              </div>
+              <div
+                style={{
+                  fontWeight: 900,
+                  fontSize: 34,
+                  color: pastel.title,
+                }}
+              >
+                {classSummary.averageMastery}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: pastel.panel,
+                border: `1px solid ${pastel.border}`,
+                borderRadius: 22,
+                padding: 20,
+                boxShadow: pastel.shadow,
+              }}
+            >
+              <div style={{ fontSize: 14, color: "#64748b", marginBottom: 8 }}>
                 At Risk / No Start
               </div>
               <div
@@ -1104,7 +1195,7 @@ export default function TeacherDashboardPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(390px, 1fr))",
                 gap: 22,
               }}
             >
@@ -1199,6 +1290,22 @@ export default function TeacherDashboardPage() {
                             </span>
                           )}
 
+                          {row.masteredCount > 0 && (
+                            <span
+                              style={{
+                                background: "#dcfce7",
+                                color: "#166534",
+                                border: "1px solid #86efac",
+                                borderRadius: 999,
+                                padding: "8px 10px",
+                                fontWeight: 800,
+                                fontSize: 12,
+                              }}
+                            >
+                              Mastered: {row.masteredCount}
+                            </span>
+                          )}
+
                           {isAtRisk && (
                             <span
                               style={{
@@ -1278,7 +1385,7 @@ export default function TeacherDashboardPage() {
                     <div
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
                         gap: 12,
                       }}
                     >
@@ -1334,7 +1441,35 @@ export default function TeacherDashboardPage() {
                             color: pastel.title,
                           }}
                         >
-                          {row.quizCompletedCount}/{TOTAL_LESSONS}
+                          {row.quizCompletedCount}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          background: "#dcfce7",
+                          border: "1px solid #86efac",
+                          borderRadius: 16,
+                          padding: 14,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 13,
+                            color: "#166534",
+                            marginBottom: 6,
+                          }}
+                        >
+                          Mastered
+                        </div>
+                        <div
+                          style={{
+                            fontWeight: 900,
+                            fontSize: 22,
+                            color: pastel.title,
+                          }}
+                        >
+                          {row.masteredCount}
                         </div>
                       </div>
 
@@ -1353,7 +1488,7 @@ export default function TeacherDashboardPage() {
                             marginBottom: 6,
                           }}
                         >
-                          Screenshots
+                          Screens
                         </div>
                         <div
                           style={{
@@ -1365,6 +1500,27 @@ export default function TeacherDashboardPage() {
                           {row.screenshotCount}
                         </div>
                       </div>
+                    </div>
+
+                    <div
+                      style={{
+                        background: "#f8fafc",
+                        border: `1px solid ${pastel.border}`,
+                        borderRadius: 16,
+                        padding: 14,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        alignItems: "center",
+                      }}
+                    >
+                      <span style={{ fontWeight: 700, color: pastel.title }}>
+                        Average quiz score
+                      </span>
+                      <span style={{ fontWeight: 900, color: pastel.title }}>
+                        {row.averageQuizPercent}%
+                      </span>
                     </div>
 
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -1456,23 +1612,25 @@ export default function TeacherDashboardPage() {
                             marginBottom: 12,
                           }}
                         >
-                          Quick Progress View
+                          Lesson-by-Lesson Overview
                         </div>
 
                         <div style={{ display: "grid", gap: 8 }}>
                           {Array.from({ length: TOTAL_LESSONS }, (_, index) => {
                             const lessonId = index + 1;
-                            const isCompleted =
-                              row.completedLessonIds.includes(lessonId);
+                            const isCompleted = row.completedLessonIds.includes(lessonId);
                             const quizResult = row.quizMap[lessonId];
                             const hasQuiz = Boolean(quizResult?.submitted);
+                            const quizBadge = hasQuiz
+                              ? getQuizBadge(quizResult.score)
+                              : null;
 
                             return (
                               <div
                                 key={lessonId}
                                 style={{
                                   display: "grid",
-                                  gridTemplateColumns: "84px 1fr auto",
+                                  gridTemplateColumns: "74px 1fr auto auto",
                                   gap: 12,
                                   alignItems: "center",
                                   padding: "10px 12px",
@@ -1488,26 +1646,70 @@ export default function TeacherDashboardPage() {
                                     color: "#64748b",
                                   }}
                                 >
-                                  Lesson {lessonId}
+                                  L{lessonId}
+                                </div>
+
+                                <div>
+                                  <div
+                                    style={{
+                                      fontWeight: 800,
+                                      color: pastel.title,
+                                      fontSize: 14,
+                                      lineHeight: 1.35,
+                                    }}
+                                  >
+                                    {LESSON_TITLES[index]}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: 12,
+                                      color: isCompleted ? "#166534" : "#b91c1c",
+                                      marginTop: 3,
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {isCompleted ? "Completed" : "Not started"}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  {quizBadge ? (
+                                    <span
+                                      style={{
+                                        background: quizBadge.bg,
+                                        border: `1px solid ${quizBadge.border}`,
+                                        color: quizBadge.text,
+                                        borderRadius: 999,
+                                        padding: "7px 10px",
+                                        fontWeight: 800,
+                                        fontSize: 12,
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      {quizBadge.label}
+                                    </span>
+                                  ) : (
+                                    <span
+                                      style={{
+                                        color: "#94a3b8",
+                                        fontWeight: 700,
+                                        fontSize: 12,
+                                      }}
+                                    >
+                                      No quiz
+                                    </span>
+                                  )}
                                 </div>
 
                                 <div
                                   style={{
-                                    fontWeight: 700,
-                                    color: isCompleted ? "#065f46" : "#b91c1c",
-                                  }}
-                                >
-                                  {isCompleted ? "✅ Completed" : "❌ Not started"}
-                                </div>
-
-                                <div
-                                  style={{
-                                    fontWeight: 800,
                                     color: pastel.title,
+                                    fontWeight: 700,
+                                    fontSize: 12,
                                     whiteSpace: "nowrap",
                                   }}
                                 >
-                                  {hasQuiz ? `Quiz ${quizResult.score}/10` : "—"}
+                                  {row.screenshotCount > 0 ? "Tracked" : "—"}
                                 </div>
                               </div>
                             );
