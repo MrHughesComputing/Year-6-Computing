@@ -2,30 +2,41 @@
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 
+type TermName = "Summer Term 1" | "Summer Term 2";
+type PlatformName = "Scratch" | "MakeCode";
+
 type Lesson = {
   id: number;
   week: number;
-  term: "Summer Term 1" | "Summer Term 2";
+  term: TermName;
+  platform: PlatformName;
   title: string;
   shortTitle: string;
   description: string;
   objective: string;
   overview: string;
   whyItMatters: string;
+  retrievalQuestion: string;
+  teachingPoints: string[];
   vocab: string[];
-  scratchSteps: string[];
-  scratchTask: string;
+  guidedSteps: string[];
+  practiceTask: string;
+  challengeTask: string;
   keyQuestion: string;
   misconception: string;
   correctOutcome: string;
   wrongOutcome: string;
-  scratchLink: string;
+  projectLink: string;
 };
 
 type QuizQuestion = {
   prompt: string;
   options: string[];
   answer: number;
+};
+
+type QuizQuestionView = QuizQuestion & {
+  originalOptionIndexes: number[];
 };
 
 type QuizResult = {
@@ -45,1620 +56,10 @@ type LearnerProfile = {
 
 type StartMode = "existing" | "new";
 
-const CLASS_OPTIONS = [
-  "Year 6 Elder",
-  "Year 6 Juniper",
-  "Year 6 Walnut",
- 
-];
+const CLASS_OPTIONS = ["Year 6 Elder", "Year 6 Juniper", "Year 6 Walnut"];
 
 const REGISTRY_KEY = "year6-pupil-registry";
 const CURRENT_PROFILE_KEY = "year6-current-profile";
-
-const lessons: Lesson[] = [
-  {
-    id: 1,
-    week: 1,
-    term: "Summer Term 1",
-    title: "Conditions",
-    shortTitle: "Intro to Conditions",
-    description: "Understanding conditions in Scratch",
-    objective: "I can explain that a condition can be true or false.",
-    overview:
-      "A condition is a check in a program. It asks whether something is true or false before the program decides what to do next.",
-    whyItMatters:
-      "Conditions help programs make decisions instead of doing the same thing every time.",
-    vocab: ["condition", "true", "false", "decision"],
-    scratchSteps: [
-      "Open Scratch and choose a sprite.",
-      "Add an event block such as ‘when green flag clicked’.",
-      "Find a control block that uses a condition.",
-      "Choose a sensing or operator block that can be true or false.",
-      "Place that condition into the control block.",
-      "Add an action inside the block, such as ‘say hello’.",
-      "Run the program and test when the condition is true.",
-      "Change the condition and test it again.",
-    ],
-    scratchTask:
-      "Create a sprite action that only happens when one rule is true.",
-    keyQuestion:
-      "How does a computer know whether it should carry out an action?",
-    misconception:
-      "A condition is not the action itself. It is the check that decides whether the action should happen.",
-    correctOutcome: "The sprite only acts when the condition is true.",
-    wrongOutcome:
-      "The sprite acts all the time or never acts because the condition is not being checked properly.",
-    scratchLink: "https://scratch.mit.edu/",
-  },
-  {
-    id: 2,
-    week: 2,
-    term: "Summer Term 1",
-    title: "If... Then...",
-    shortTitle: "Single Outcome Selection",
-    description: "Using if... then... in Scratch",
-    objective:
-      "I can use an if... then... block to make a simple decision.",
-    overview:
-      "An if... then... block tells the computer to do something only when a condition is true.",
-    whyItMatters:
-      "This lets programs respond to events instead of always running in the same way.",
-    vocab: ["if", "then", "selection", "action"],
-    scratchSteps: [
-      "Open Scratch and pick a sprite.",
-      "Add ‘when green flag clicked’.",
-      "Drag in an ‘if... then...’ block from Control.",
-      "Choose a condition, such as ‘touching edge?’ or ‘key space pressed?’.",
-      "Place the condition inside the if space.",
-      "Add one action inside the then section, such as ‘say hello’.",
-      "Run the code and check what happens when the condition is true.",
-      "Test what happens when the condition is false.",
-    ],
-    scratchTask: "Make a sprite react only when a condition is true.",
-    keyQuestion:
-      "What happens if the condition is false in an if... then... block?",
-    misconception:
-      "Nothing inside the block runs when the condition is false.",
-    correctOutcome: "The action happens only when the rule is met.",
-    wrongOutcome:
-      "The action happens all the time because the condition is missing or outside the block.",
-    scratchLink: "https://scratch.mit.edu/",
-  },
-  {
-    id: 3,
-    week: 3,
-    term: "Summer Term 1",
-    title: "If... Then... Else...",
-    shortTitle: "Branching",
-    description: "Using two outcomes in Scratch",
-    objective: "I can create code with two different outcomes.",
-    overview:
-      "If... then... else... lets a program choose between two different outcomes.",
-    whyItMatters:
-      "It allows a program to respond differently when the answer is right or wrong.",
-    vocab: ["else", "branch", "outcome", "selection"],
-    scratchSteps: [
-      "Open Scratch and add ‘when green flag clicked’.",
-      "Use ‘ask ... and wait’ to collect an answer.",
-      "Drag in an ‘if... then... else...’ block.",
-      "Compare the answer to the correct response using an operator block.",
-      "Put the check inside the if space.",
-      "Add a correct message in the then section.",
-      "Add a different message in the else section.",
-      "Test with both a correct and incorrect answer.",
-    ],
-    scratchTask:
-      "Create a quiz-style response with a correct and incorrect outcome.",
-    keyQuestion: "Why is the else part useful in a program?",
-    misconception:
-      "Else is not repetition. It is the second outcome when the condition is false.",
-    correctOutcome:
-      "The program gives one response for true and another for false.",
-    wrongOutcome:
-      "The same response appears every time because both outcomes are not set clearly.",
-    scratchLink: "https://scratch.mit.edu/",
-  },
-  {
-    id: 4,
-    week: 4,
-    term: "Summer Term 1",
-    title: "Selection + Loops",
-    shortTitle: "Continuous Checking",
-    description: "Using selection inside repetition",
-    objective:
-      "I can explain how a program keeps checking for an event.",
-    overview:
-      "A loop repeats code. A condition inside a loop can be checked again and again.",
-    whyItMatters:
-      "This is how games and interactive projects respond in real time.",
-    vocab: ["loop", "repeat", "forever", "check"],
-    scratchSteps: [
-      "Open Scratch and add ‘when green flag clicked’.",
-      "Add a ‘forever’ block from Control.",
-      "Place an ‘if... then...’ block inside the forever loop.",
-      "Choose a condition such as ‘key pressed?’ or ‘touching mouse-pointer?’.",
-      "Place the condition inside the if section.",
-      "Add an action inside the then section.",
-      "Run the program and try the action several times.",
-      "Notice that the condition is checked continuously.",
-    ],
-    scratchTask:
-      "Create a script that keeps checking for a key press or collision.",
-    keyQuestion:
-      "Why does a program need to keep checking some conditions repeatedly?",
-    misconception:
-      "One check is not enough in a live program. It must keep checking while the program runs.",
-    correctOutcome:
-      "The sprite responds as soon as the event happens.",
-    wrongOutcome:
-      "The program only checks once because the selection block is not inside a loop.",
-    scratchLink: "https://scratch.mit.edu/",
-  },
-  {
-    id: 5,
-    week: 5,
-    term: "Summer Term 1",
-    title: "Asking Questions",
-    shortTitle: "Input + Decisions",
-    description: "Using ask/answer with conditions",
-    objective:
-      "I can use a player’s answer inside a condition.",
-    overview:
-      "The ask block collects input from the user. The answer block stores what the user typed.",
-    whyItMatters:
-      "It makes projects interactive because the computer responds to the player.",
-    vocab: ["input", "answer", "question", "response"],
-    scratchSteps: [
-      "Open Scratch and add ‘when green flag clicked’.",
-      "Use ‘ask ... and wait’ to ask a question.",
-      "Add an ‘if... then... else...’ block.",
-      "Use an operator block to compare ‘answer’ to the correct response.",
-      "Place that comparison into the if space.",
-      "Add feedback in the then section.",
-      "Add different feedback in the else section.",
-      "Test with several different answers.",
-    ],
-    scratchTask:
-      "Create one interactive question using ask, answer, and a condition.",
-    keyQuestion: "How does Scratch remember what the user typed?",
-    misconception:
-      "The answer block stores the user response, not the question itself.",
-    correctOutcome:
-      "The program checks the user’s answer and gives suitable feedback.",
-    wrongOutcome:
-      "The program cannot judge the response because the answer block was not used correctly.",
-    scratchLink: "https://scratch.mit.edu/",
-  },
-  {
-    id: 6,
-    week: 6,
-    term: "Summer Term 1",
-    title: "Designing a Quiz",
-    shortTitle: "Planning Logic",
-    description: "Planning a Scratch quiz before coding",
-    objective:
-      "I can plan the steps and decisions for a quiz program.",
-    overview:
-      "Planning means deciding the order, questions, and outcomes before coding.",
-    whyItMatters:
-      "Good plans make programs easier to build, test, and improve.",
-    vocab: ["algorithm", "plan", "flowchart", "sequence"],
-    scratchSteps: [
-      "Write the first question you want to ask.",
-      "Write the correct answer beside it.",
-      "Decide what should happen when the answer is correct.",
-      "Decide what should happen when the answer is wrong.",
-      "Repeat this for a second question.",
-      "Put the steps into a simple order or flowchart.",
-      "Only after planning, open Scratch.",
-      "Build the first question from your plan.",
-    ],
-    scratchTask:
-      "Plan a short quiz with at least two questions before opening Scratch.",
-    keyQuestion:
-      "Why is it useful to plan a program before writing code?",
-    misconception:
-      "Planning is not a delay. It helps avoid mistakes and messy code later.",
-    correctOutcome:
-      "The program is easier to build because the logic is already clear.",
-    wrongOutcome:
-      "The coding becomes confusing because the steps were not planned first.",
-    scratchLink: "https://scratch.mit.edu/",
-  },
-  {
-    id: 7,
-    week: 7,
-    term: "Summer Term 1",
-    title: "Debugging",
-    shortTitle: "Fixing Logic",
-    description: "Finding and fixing errors in selection code",
-    objective:
-      "I can test a program and fix logic mistakes.",
-    overview:
-      "Debugging means finding and correcting mistakes in a program.",
-    whyItMatters:
-      "Testing and debugging help programs work reliably.",
-    vocab: ["debug", "error", "test", "fix"],
-    scratchSteps: [
-      "Run the program once and watch carefully.",
-      "Test a correct answer or true condition.",
-      "Test an incorrect answer or false condition.",
-      "Notice which part is not behaving properly.",
-      "Check the condition block first.",
-      "Check whether blocks are in the correct order.",
-      "Change one thing at a time.",
-      "Retest after each change.",
-    ],
-    scratchTask:
-      "Test a quiz or decision program and fix at least one logic error.",
-    keyQuestion:
-      "What should you do first when your program does not behave as expected?",
-    misconception:
-      "Debugging does not mean starting again. It means finding the exact problem and fixing it.",
-    correctOutcome:
-      "The program works after careful testing and small changes.",
-    wrongOutcome:
-      "The problem remains because the code was changed without testing methodically.",
-    scratchLink: "https://scratch.mit.edu/",
-  },
-  {
-    id: 8,
-    week: 1,
-    term: "Summer Term 2",
-    title: "Build a Quiz",
-    shortTitle: "First Working Question",
-    description: "Creating the first question in a quiz",
-    objective:
-      "I can build a working quiz question using input and selection.",
-    overview:
-      "This lesson combines asking questions, checking answers, and giving feedback into one working quiz item.",
-    whyItMatters:
-      "It turns separate coding skills into a real project.",
-    vocab: ["quiz", "input", "condition", "feedback"],
-    scratchSteps: [
-      "Open Scratch and add ‘when green flag clicked’.",
-      "Ask your first question.",
-      "Use answer in a comparison block.",
-      "Place the comparison inside an ‘if... then... else...’ block.",
-      "Write correct feedback in then.",
-      "Write incorrect feedback in else.",
-      "Test with a right answer.",
-      "Test with a wrong answer.",
-    ],
-    scratchTask:
-      "Create one complete quiz question with feedback for correct and incorrect answers.",
-    keyQuestion:
-      "What parts are needed for one working quiz question?",
-    misconception:
-      "A good first version should be simple and complete before extra features are added.",
-    correctOutcome:
-      "The quiz question works fully from question to feedback.",
-    wrongOutcome:
-      "The question appears, but the answer is not checked properly.",
-    scratchLink: "https://scratch.mit.edu/",
-  },
-  {
-    id: 9,
-    week: 2,
-    term: "Summer Term 2",
-    title: "Expand the Quiz",
-    shortTitle: "Multiple Questions",
-    description: "Adding more questions and structure",
-    objective:
-      "I can extend my quiz to include multiple questions.",
-    overview:
-      "Expanding means adding more content while keeping the code clear and organised.",
-    whyItMatters:
-      "A larger project still needs to stay easy to understand and test.",
-    vocab: ["extend", "structure", "score", "sequence"],
-    scratchSteps: [
-      "Finish one working question first.",
-      "Copy the structure for a second question.",
-      "Change the wording and correct answer.",
-      "Add new correct and incorrect feedback.",
-      "Place the second question after the first one.",
-      "Check that the order still makes sense.",
-      "Test both questions.",
-      "Improve any part that feels unclear.",
-    ],
-    scratchTask:
-      "Add at least one more question and keep the quiz organised.",
-    keyQuestion:
-      "How can you make your quiz bigger without making it messy?",
-    misconception:
-      "Copying code is useful only if it stays organised and is edited carefully.",
-    correctOutcome:
-      "The quiz has more than one question and still makes sense.",
-    wrongOutcome:
-      "The quiz becomes confusing because the questions are out of order or not edited correctly.",
-    scratchLink: "https://scratch.mit.edu/",
-  },
-  {
-    id: 10,
-    week: 3,
-    term: "Summer Term 2",
-    title: "Testing and Improving",
-    shortTitle: "Refining Accuracy",
-    description: "Checking quiz logic and improving reliability",
-    objective:
-      "I can test my project and improve weak areas.",
-    overview:
-      "Testing checks whether a project works in different situations, not just once.",
-    whyItMatters:
-      "Reliable projects work for different answers and different users.",
-    vocab: ["test", "improve", "logic", "edge case"],
-    scratchSteps: [
-      "Run the quiz from the beginning.",
-      "Try a correct answer.",
-      "Try an incorrect answer.",
-      "Try an unusual answer, such as a capital letter or space.",
-      "Record what went wrong.",
-      "Fix one issue at a time.",
-      "Retest after each fix.",
-      "Ask a partner to test it too.",
-    ],
-    scratchTask:
-      "Test each question and improve any part that does not work correctly.",
-    keyQuestion:
-      "Why should you test a project in more than one way?",
-    misconception:
-      "One successful test does not prove the project is fully correct.",
-    correctOutcome:
-      "The project works more reliably because it has been tested properly.",
-    wrongOutcome:
-      "Hidden mistakes remain because testing was too limited.",
-    scratchLink: "https://scratch.mit.edu/",
-  },
-  {
-    id: 11,
-    week: 4,
-    term: "Summer Term 2",
-    title: "Enhancing the Program",
-    shortTitle: "Better User Experience",
-    description: "Improving the design and feedback of the quiz",
-    objective:
-      "I can improve my project so it is clearer and more enjoyable.",
-    overview:
-      "Enhancing means improving the experience for the person using the program.",
-    whyItMatters:
-      "A good program should be correct, clear, and enjoyable to use.",
-    vocab: ["enhance", "design", "user experience", "feedback"],
-    scratchSteps: [
-      "Look at the instructions on screen.",
-      "Make them shorter and clearer.",
-      "Improve the feedback messages.",
-      "Check that the questions are easy to read.",
-      "Add useful visual or sound feedback.",
-      "Keep the code organised while improving the design.",
-      "Test whether the quiz is easier to use.",
-      "Ask a partner what could still be better.",
-    ],
-    scratchTask:
-      "Improve the design, messages, and feedback in your quiz.",
-    keyQuestion:
-      "What makes a program easier and more enjoyable to use?",
-    misconception:
-      "Improvement is not just decoration. It should help the user understand and use the program better.",
-    correctOutcome:
-      "The project feels clearer and more polished for the user.",
-    wrongOutcome:
-      "Extra features are added, but the quiz becomes less clear or harder to use.",
-    scratchLink: "https://scratch.mit.edu/",
-  },
-  {
-    id: 12,
-    week: 5,
-    term: "Summer Term 2",
-    title: "Consolidation",
-    shortTitle: "Final Project Review",
-    description: "Finishing, reviewing, and evaluating the quiz",
-    objective:
-      "I can complete my quiz and reflect on what I learned.",
-    overview:
-      "Consolidation means bringing your learning together and reviewing your final project.",
-    whyItMatters:
-      "Reflection helps you identify strengths and next steps.",
-    vocab: ["evaluate", "review", "complete", "reflect"],
-    scratchSteps: [
-      "Run your project from start to finish.",
-      "Check that each question works properly.",
-      "Check the messages and feedback.",
-      "Fix any final errors.",
-      "Review your vocabulary and coding choices.",
-      "Decide one strength in your project.",
-      "Decide one thing you would improve next time.",
-      "Save and present your final version.",
-    ],
-    scratchTask:
-      "Finish your project and identify one strength and one next step.",
-    keyQuestion:
-      "How do you know whether your final project is successful?",
-    misconception:
-      "Finished does not mean perfect. Reflection is about judging quality and identifying improvements.",
-    correctOutcome:
-      "The final project is complete and the pupil can explain its strengths.",
-    wrongOutcome:
-      "The project is rushed and not reviewed carefully before being called finished.",
-    scratchLink: "https://scratch.mit.edu/",
-  },
-];
-
-const quizBank: Record<number, QuizQuestion[]> = {
-  1: [
-    {
-      prompt: "What is a condition in a program?",
-      options: [
-        "A check that is either true or false",
-        "A way to draw a sprite",
-        "A sound effect in Scratch",
-        "A type of background",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What does a program use a condition for?",
-      options: [
-        "To decide what should happen next",
-        "To make the stage bigger",
-        "To save the project automatically",
-        "To colour the blocks",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which of these can be true or false?",
-      options: [
-        "Is the sprite touching the edge?",
-        "Move 10 steps",
-        "Play a drum sound",
-        "Switch costume",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which Scratch block category often uses conditions?",
-      options: ["Control", "Looks only", "Sound only", "My Blocks only"],
-      answer: 0,
-    },
-    {
-      prompt: "If a condition is false, what should happen in a simple if block?",
-      options: [
-        "The action inside should not happen",
-        "The action should always happen",
-        "Scratch should close",
-        "The sprite should delete itself",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which word best describes what a condition does?",
-      options: ["Checks", "Paints", "Prints", "Copies"],
-      answer: 0,
-    },
-    {
-      prompt: "Why are conditions useful in games and quizzes?",
-      options: [
-        "They let the program respond differently",
-        "They make code invisible",
-        "They replace all other blocks",
-        "They stop all testing",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which pair best matches a condition?",
-      options: ["True and false", "Up and down", "Fast and slow", "Big and small"],
-      answer: 0,
-    },
-    {
-      prompt: "What is the mistake in thinking a condition is the action itself?",
-      options: [
-        "A condition checks; it does not do the action",
-        "A condition is always a sprite",
-        "A condition is always a sound",
-        "A condition is always a loop",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which example is most like a condition?",
-      options: [
-        "Is the space key pressed?",
-        "Say hello for 2 seconds",
-        "Turn 15 degrees",
-        "Change size by 10",
-      ],
-      answer: 0,
-    },
-  ],
-  2: [
-    {
-      prompt: "What does an if... then... block do?",
-      options: [
-        "Runs code only if a condition is true",
-        "Runs code forever without checking",
-        "Always gives two answers",
-        "Stores a score",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What happens if the condition is false in an if... then... block?",
-      options: [
-        "Nothing inside the block happens",
-        "Everything inside happens twice",
-        "Scratch crashes",
-        "The sprite disappears",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which block would fit inside the if part?",
-      options: [
-        "touching edge?",
-        "say hello",
-        "move 10 steps",
-        "switch costume",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which block could go inside the then section?",
-      options: [
-        "say hello",
-        "touching mouse-pointer?",
-        "key space pressed?",
-        "answer = yes",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why is if... then... called selection?",
-      options: [
-        "Because the program selects whether to act",
-        "Because it selects a new sprite colour",
-        "Because it sorts files",
-        "Because it changes the stage name",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which sentence is correct?",
-      options: [
-        "The action happens only when the rule is met",
-        "The action happens whether the rule is true or false",
-        "The action always repeats forever",
-        "The action removes the condition",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is needed for an if... then... block to work properly?",
-      options: [
-        "A true/false condition",
-        "A microphone",
-        "A second computer",
-        "A printed worksheet",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which situation suits if... then...?",
-      options: [
-        "Make a sprite jump if the space key is pressed",
-        "Always move the sprite 10 steps",
-        "Play music the whole time",
-        "Change every backdrop at once",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What common mistake causes the action to happen all the time?",
-      options: [
-        "The condition is missing or placed wrongly",
-        "The sprite is too small",
-        "The stage is white",
-        "The project is saved",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is the main purpose of this lesson?",
-      options: [
-        "To make one simple decision in code",
-        "To draw quiz backgrounds",
-        "To animate costumes only",
-        "To use sound effects only",
-      ],
-      answer: 0,
-    },
-  ],
-  3: [
-    {
-      prompt: "What does an if... then... else... block allow a program to do?",
-      options: [
-        "Choose between two outcomes",
-        "Play two sounds at once",
-        "Delete two sprites",
-        "Open two projects",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "When does the else part run?",
-      options: [
-        "When the condition is false",
-        "When the condition is true",
-        "Before the project starts",
-        "Only when Scratch saves",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why is else useful in a quiz?",
-      options: [
-        "It gives a different response for a wrong answer",
-        "It changes the font",
-        "It makes the sprite invisible",
-        "It stops all input",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which block helps gather the player's response?",
-      options: [
-        "ask ... and wait",
-        "move 10 steps",
-        "hide",
-        "next costume",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should go inside the condition space?",
-      options: [
-        "A check such as answer = correct response",
-        "A whole paragraph of text",
-        "A backdrop",
-        "A sound file",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which sentence is true?",
-      options: [
-        "If gives one path, else gives the other path",
-        "Else repeats the same action again",
-        "Else is used only for movement",
-        "Else works without a condition",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is branching in this lesson?",
-      options: [
-        "The program splitting into two possible outcomes",
-        "Drawing tree branches",
-        "Using two sprites together",
-        "Adding extra costumes",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which response is best for the then section?",
-      options: [
-        "Correct! Well done.",
-        "Nothing at all",
-        "Change the background every second forever",
-        "Delete the stage",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which response is best for the else section?",
-      options: [
-        "Not quite. Try again.",
-        "Always say Correct!",
-        "Ignore the answer completely",
-        "Never show any message",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What misunderstanding should pupils avoid?",
-      options: [
-        "Else is not repetition; it is the false outcome",
-        "Else means the program stops forever",
-        "Else means make a new sprite",
-        "Else is the same as repeat",
-      ],
-      answer: 0,
-    },
-  ],
-  4: [
-    {
-      prompt: "Why do we put selection inside a loop?",
-      options: [
-        "So the condition can be checked again and again",
-        "So the code becomes invisible",
-        "So the sprite never moves",
-        "So the quiz cannot start",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which loop is often used for continuous checking?",
-      options: ["forever", "wait", "say", "hide"],
-      answer: 0,
-    },
-    {
-      prompt: "What happens if an if block is not inside a loop in a live program?",
-      options: [
-        "It may only check once",
-        "It checks all the time anyway",
-        "It creates new sprites automatically",
-        "It adds sound effects by itself",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which situation needs continuous checking?",
-      options: [
-        "Seeing whether a key is pressed during a game",
-        "Saving a project name once",
-        "Typing a title once",
-        "Choosing a sprite once",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is the main job of the forever block here?",
-      options: [
-        "To keep repeating the check",
-        "To stop the program",
-        "To change the backdrop once",
-        "To add a new costume",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which condition could be useful in a loop?",
-      options: [
-        "touching mouse-pointer?",
-        "say hello",
-        "play sound until done",
-        "go to x: y:",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why do games often need loops and selection together?",
-      options: [
-        "Because they must respond in real time",
-        "Because they never use conditions",
-        "Because they only need backgrounds",
-        "Because loops replace all actions",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What would the sprite do if the condition becomes true while the loop runs?",
-      options: [
-        "Respond as soon as it is checked",
-        "Ignore it forever",
-        "Delete the project",
-        "Turn off Scratch",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What common mistake stops fast responses?",
-      options: [
-        "Putting the if block outside the loop",
-        "Giving the sprite a name",
-        "Using a colourful backdrop",
-        "Saving the project",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is being checked repeatedly in this lesson?",
-      options: [
-        "A condition",
-        "A printed worksheet",
-        "A mouse battery",
-        "A font choice",
-      ],
-      answer: 0,
-    },
-  ],
-  5: [
-    {
-      prompt: "What does the ask block do?",
-      options: [
-        "Collects input from the user",
-        "Changes the sprite colour",
-        "Saves the project",
-        "Deletes wrong answers",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Where is the user's typed response stored?",
-      options: ["In the answer block", "In the backdrop", "In the sprite name", "In the green flag"],
-      answer: 0,
-    },
-    {
-      prompt: "Why is the ask and answer system useful?",
-      options: [
-        "It makes the project interactive",
-        "It makes every sprite larger",
-        "It stops code from running",
-        "It removes the need for conditions",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should you compare to the correct response?",
-      options: ["answer", "stage size", "costume number", "mouse pointer x"],
-      answer: 0,
-    },
-    {
-      prompt: "Which block structure works well after asking a question?",
-      options: [
-        "if... then... else...",
-        "forever only",
-        "repeat without a condition",
-        "hide and show only",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is the best way to respond to a correct answer?",
-      options: [
-        "Give suitable positive feedback",
-        "Ignore it",
-        "Delete the sprite",
-        "Close the project",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is the best way to respond to a wrong answer?",
-      options: [
-        "Give different feedback",
-        "Always say the answer is correct",
-        "Stop the computer",
-        "Remove the question",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should pupils avoid misunderstanding?",
-      options: [
-        "The answer block stores the response, not the question",
-        "The answer block stores a costume",
-        "The answer block stores a backdrop",
-        "The answer block stores the sprite name only",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which example uses input correctly?",
-      options: [
-        "Ask the player a question and compare answer to the correct word",
-        "Ask a question and never use the answer",
-        "Type the answer into the sprite name",
-        "Use only a move block",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is the main idea of this lesson?",
-      options: [
-        "Using player input in a condition",
-        "Drawing characters",
-        "Recording voice only",
-        "Making new costumes only",
-      ],
-      answer: 0,
-    },
-  ],
-  6: [
-    {
-      prompt: "What does planning a quiz mean?",
-      options: [
-        "Deciding the order, questions, and outcomes before coding",
-        "Colouring the stage before coding",
-        "Using random blocks without thinking",
-        "Typing code as fast as possible",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why is planning useful?",
-      options: [
-        "It makes the program easier to build and test",
-        "It removes the need for code",
-        "It always fixes every bug",
-        "It replaces Scratch",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which should be planned before coding a question?",
-      options: [
-        "The correct answer",
-        "The laptop battery level",
-        "The classroom door colour",
-        "The font on the keyboard",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should you also plan besides the questions?",
-      options: [
-        "What happens for correct and wrong answers",
-        "How many desks are in the room",
-        "What the teacher is wearing",
-        "How long the mouse cable is",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which word means a set of steps for a program?",
-      options: ["algorithm", "speaker", "printer", "screen saver"],
-      answer: 0,
-    },
-    {
-      prompt: "What could help show the order of a quiz before coding?",
-      options: ["A flowchart", "A loudspeaker", "A calculator", "A charger"],
-      answer: 0,
-    },
-    {
-      prompt: "What is a poor way to begin a larger project?",
-      options: [
-        "Coding without deciding the logic first",
-        "Writing the questions down first",
-        "Thinking about the order first",
-        "Checking the outcomes first",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why is planning not a waste of time?",
-      options: [
-        "It helps avoid confusion later",
-        "It stops pupils from learning",
-        "It deletes all mistakes automatically",
-        "It is only for adults",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should happen after the planning stage?",
-      options: [
-        "Build the first question from the plan",
-        "Ignore the plan completely",
-        "Print the screen and stop",
-        "Delete the notes",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is the main purpose of this lesson?",
-      options: [
-        "To plan quiz logic clearly before coding",
-        "To add many sounds at random",
-        "To decorate the stage only",
-        "To make the project run forever with no input",
-      ],
-      answer: 0,
-    },
-  ],
-  7: [
-    {
-      prompt: "What does debugging mean?",
-      options: [
-        "Finding and fixing mistakes in a program",
-        "Drawing bugs on the stage",
-        "Starting every project again",
-        "Saving the project twice",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should you do first when a program behaves unexpectedly?",
-      options: [
-        "Test carefully and look for the problem",
-        "Delete all the code at once",
-        "Close Scratch immediately",
-        "Add more sprites",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why is it useful to test both correct and incorrect answers?",
-      options: [
-        "So you can see whether both outcomes work",
-        "So you can make the quiz longer",
-        "So you can avoid using conditions",
-        "So you can remove all feedback",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which part should you check first in selection code?",
-      options: [
-        "The condition block",
-        "The colour of the stage",
-        "The size of the teacher's screen",
-        "The computer wallpaper",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why should you change one thing at a time while debugging?",
-      options: [
-        "So you know what fixed the problem",
-        "So the program becomes confusing",
-        "So no testing is needed",
-        "So you can avoid thinking",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is a sensible debugging habit?",
-      options: [
-        "Retest after each change",
-        "Never run the code",
-        "Guess without looking",
-        "Keep adding blocks randomly",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is a logic error?",
-      options: [
-        "The code runs, but not in the way you intended",
-        "The screen is dusty",
-        "The mouse is unplugged",
-        "The backdrop is pink",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What misunderstanding should pupils avoid?",
-      options: [
-        "Debugging is not starting again; it is fixing the real problem",
-        "Debugging means never testing",
-        "Debugging means adding more sounds",
-        "Debugging means avoiding mistakes forever",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which is the best example of methodical debugging?",
-      options: [
-        "Test, spot the issue, change one part, and test again",
-        "Delete the whole project immediately",
-        "Ask Scratch to fix everything by itself",
-        "Keep clicking random blocks",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is the goal of debugging?",
-      options: [
-        "To make the program work reliably",
-        "To make the quiz impossible",
-        "To remove all conditions",
-        "To stop pupils from checking work",
-      ],
-      answer: 0,
-    },
-  ],
-  8: [
-    {
-      prompt: "What makes one complete quiz question work?",
-      options: [
-        "A question, an answer check, and feedback",
-        "A backdrop and a sound only",
-        "A sprite and a costume only",
-        "A loop with no condition",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should happen after the player types an answer?",
-      options: [
-        "The program should check it",
-        "The project should close",
-        "The sprite should disappear",
-        "The code should delete itself",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which block helps compare the answer with the correct response?",
-      options: [
-        "An operator comparison block",
-        "A motion block",
-        "A looks block only",
-        "A sound block only",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which control block is most suitable for two outcomes?",
-      options: ["if... then... else...", "repeat 10", "wait 1 second", "hide"],
-      answer: 0,
-    },
-    {
-      prompt: "What is good advice for a first working version?",
-      options: [
-        "Keep it simple but complete",
-        "Add every feature at once",
-        "Never test it",
-        "Avoid feedback messages",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What does the then section usually contain?",
-      options: [
-        "Correct feedback",
-        "A new login page",
-        "A computer restart",
-        "A deleted sprite",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What does the else section usually contain?",
-      options: [
-        "Incorrect feedback",
-        "The exact same message every time",
-        "No response at all",
-        "A stage size change",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why is this lesson important?",
-      options: [
-        "It combines earlier skills into a real project",
-        "It removes the need for planning",
-        "It stops pupils from improving",
-        "It only teaches decoration",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should you test when your first question is built?",
-      options: [
-        "A right answer and a wrong answer",
-        "Only the green flag",
-        "Only the backdrop",
-        "Only the sprite size",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is the main aim of this lesson?",
-      options: [
-        "To build one working quiz question",
-        "To create ten backdrops",
-        "To make the sprite dance forever",
-        "To avoid using input",
-      ],
-      answer: 0,
-    },
-  ],
-  9: [
-    {
-      prompt: "What does it mean to expand a quiz?",
-      options: [
-        "Add more questions while keeping it organised",
-        "Make the text bigger only",
-        "Delete the first question",
-        "Remove all conditions",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should you finish before adding another question?",
-      options: [
-        "One working question",
-        "Every costume in Scratch",
-        "A soundtrack",
-        "The printed display board",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why can copying code be useful?",
-      options: [
-        "It helps build the next question faster if edited carefully",
-        "It means no thinking is needed",
-        "It fixes all bugs by itself",
-        "It removes the need for testing",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What must you change after copying a question?",
-      options: [
-        "The wording and correct answer",
-        "The school name",
-        "The stage size",
-        "The mouse cable",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why is structure important in a bigger quiz?",
-      options: [
-        "So the order still makes sense",
-        "So nobody can read it",
-        "So the quiz becomes confusing",
-        "So it stops after one question",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should you test after adding a second question?",
-      options: [
-        "Both questions",
-        "Only the title",
-        "Only the first sprite costume",
-        "Only the backdrop colour",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is one danger when extending a project?",
-      options: [
-        "It can become messy if not organised",
-        "It always becomes impossible",
-        "It can never be tested",
-        "It removes the first question automatically",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which word best matches making a project bigger?",
-      options: ["extend", "erase", "shrink", "freeze"],
-      answer: 0,
-    },
-    {
-      prompt: "What common mistake should pupils avoid?",
-      options: [
-        "Copying code and forgetting to edit it properly",
-        "Testing both questions",
-        "Keeping the code in order",
-        "Using clear feedback",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is the goal of this lesson?",
-      options: [
-        "To add more quiz questions clearly and sensibly",
-        "To replace all questions with sounds",
-        "To remove all structure",
-        "To stop after one question forever",
-      ],
-      answer: 0,
-    },
-  ],
-  10: [
-    {
-      prompt: "Why should a project be tested in more than one way?",
-      options: [
-        "Because one successful test does not prove everything works",
-        "Because testing is only for adults",
-        "Because the first test is always perfect",
-        "Because testing deletes mistakes automatically",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which is a good test for a quiz project?",
-      options: [
-        "Try correct, incorrect, and unusual answers",
-        "Only click the green flag once",
-        "Only look at the backdrop",
-        "Only test the project title",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is an edge case?",
-      options: [
-        "An unusual input that still needs to work",
-        "A type of sprite",
-        "A kind of background",
-        "A sound effect",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why might capital letters matter in testing?",
-      options: [
-        "Because the program may react differently to them",
-        "Because capital letters break every computer",
-        "Because Scratch cannot display them",
-        "Because they change the sprite colour",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should you do after finding a problem?",
-      options: [
-        "Fix one issue at a time and retest",
-        "Delete everything",
-        "Ignore it",
-        "Add three more questions immediately",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why is partner testing useful?",
-      options: [
-        "Another person may spot problems you missed",
-        "It removes the need for your own testing",
-        "It makes the code shorter",
-        "It changes the class name",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is the purpose of recording what went wrong?",
-      options: [
-        "It helps you improve the right part",
-        "It makes the project slower",
-        "It stops the quiz from running",
-        "It changes the sprite costume",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What does improving reliability mean?",
-      options: [
-        "Making the project work in different situations",
-        "Making the project louder",
-        "Making the stage brighter",
-        "Adding more random blocks",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which statement is true?",
-      options: [
-        "Testing is part of making a strong project",
-        "Testing is only needed after publishing",
-        "Testing should be avoided",
-        "Testing replaces coding",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is the main focus of this lesson?",
-      options: [
-        "Checking the quiz carefully and improving weak areas",
-        "Changing every sprite name",
-        "Using only movement blocks",
-        "Removing all feedback",
-      ],
-      answer: 0,
-    },
-  ],
-  11: [
-    {
-      prompt: "What does enhancing a program mean?",
-      options: [
-        "Improving how clear and enjoyable it is to use",
-        "Making it longer without thinking",
-        "Deleting working parts",
-        "Removing all instructions",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is user experience?",
-      options: [
-        "How the program feels for the person using it",
-        "The colour of the teacher's desk",
-        "The age of the laptop",
-        "The size of the mouse mat",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which improvement is most helpful?",
-      options: [
-        "Making instructions clearer",
-        "Adding confusing text everywhere",
-        "Hiding all feedback",
-        "Removing all questions",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why is feedback important in a quiz?",
-      options: [
-        "It helps the user understand what happened",
-        "It changes the school logo",
-        "It stops the answer being checked",
-        "It removes the need for testing",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should you think about before adding extra sounds or visuals?",
-      options: [
-        "Do they help the user?",
-        "Are they the brightest possible colours?",
-        "Can they replace all the code?",
-        "Will they remove the questions?",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is a poor improvement choice?",
-      options: [
-        "Adding features that make the quiz harder to understand",
-        "Using clearer messages",
-        "Checking readability",
-        "Asking a partner for feedback",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should happen to the code while improving design?",
-      options: [
-        "It should stay organised",
-        "It should become messy",
-        "It should be hidden from everyone",
-        "It should be deleted",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why should the questions be easy to read?",
-      options: [
-        "Because users need to understand them quickly",
-        "Because Scratch cannot show text otherwise",
-        "Because big text fixes logic errors",
-        "Because reading is not important",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What misunderstanding should pupils avoid?",
-      options: [
-        "Improvement is not just decoration; it should help the user",
-        "Improvement means adding random sounds only",
-        "Improvement means changing everything at once",
-        "Improvement means never asking for feedback",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is the main aim of this lesson?",
-      options: [
-        "To make the quiz clearer and more polished",
-        "To remove all messages",
-        "To avoid thinking about the user",
-        "To stop testing completely",
-      ],
-      answer: 0,
-    },
-  ],
-  12: [
-    {
-      prompt: "What does consolidation mean in this unit?",
-      options: [
-        "Bringing learning together and reviewing the final project",
-        "Starting again from lesson one",
-        "Only changing colours",
-        "Removing all quiz questions",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should you do before calling the project finished?",
-      options: [
-        "Run it from start to finish and check it carefully",
-        "Close it immediately",
-        "Delete the feedback",
-        "Ignore all mistakes",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why is reflection useful?",
-      options: [
-        "It helps you spot strengths and next steps",
-        "It stops you from improving",
-        "It replaces testing",
-        "It changes the code automatically",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is a strength in a final project?",
-      options: [
-        "Something that works well",
-        "A random mistake",
-        "An empty section",
-        "A missing answer check",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is a next step?",
-      options: [
-        "Something you would improve in future",
-        "The same thing as deleting the project",
-        "A new computer",
-        "A printed title page",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should you check near the end?",
-      options: [
-        "Questions, feedback, and any remaining errors",
-        "Only the class name",
-        "Only the font size",
-        "Only the device wallpaper",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Which sentence is true?",
-      options: [
-        "Finished does not always mean perfect",
-        "Finished always means there is nothing to improve",
-        "Finished means it was never tested",
-        "Finished means the code is invisible",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "Why should pupils review their coding choices?",
-      options: [
-        "So they can explain how the project works",
-        "So they can remove all logic",
-        "So they can avoid discussing learning",
-        "So they can stop the quiz running",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What should a final version be ready for?",
-      options: [
-        "Saving and presenting",
-        "Deleting immediately",
-        "Never being opened again",
-        "Having all conditions removed",
-      ],
-      answer: 0,
-    },
-    {
-      prompt: "What is the main purpose of this lesson?",
-      options: [
-        "To finish the quiz and reflect on the learning",
-        "To start a different unit without review",
-        "To replace every question with animation",
-        "To skip evaluation",
-      ],
-      answer: 0,
-    },
-  ],
-};
 
 const pastel = {
   page: "#f8fafc",
@@ -1682,7 +83,1658 @@ const pastel = {
   rose: "#f43f5e",
   roseSoft: "#fff1f2",
   blueSoft: "#dbeafe",
+  slateSoft: "#f8fafc",
   shadow: "0 10px 30px rgba(148, 163, 184, 0.14)",
+};
+
+const lessons: Lesson[] = [
+  {
+    id: 1,
+    week: 1,
+    term: "Summer Term 1",
+    platform: "Scratch",
+    title: "Variables in Games",
+    shortTitle: "What is a Variable?",
+    description: "Introducing variables as values that can change during a game.",
+    objective: "I can explain that a variable stores information that can change.",
+    overview:
+      "A variable is like a labelled box in a program. It holds a value such as score, health, lives, or time, and that value can change while the project runs.",
+    whyItMatters:
+      "Games and interactive programs need to keep track of changing information. Variables make that possible.",
+    retrievalQuestion:
+      "Before this lesson: what kinds of information change while you are playing a game?",
+    teachingPoints: [
+      "A variable stores data with a label.",
+      "The value inside a variable can increase, decrease, or be reset.",
+      "Common game variables include score, timer, lives, health, and level.",
+      "A variable is not just for maths; it is for tracking change.",
+    ],
+    vocab: ["variable", "value", "store", "data", "score", "lives"],
+    guidedSteps: [
+      "Open Scratch and create a new project.",
+      "Delete the cat only if you want a different sprite.",
+      "Go to Variables and choose Make a Variable.",
+      "Create a variable called score.",
+      "Tick the checkbox so the score appears on the stage.",
+      "Add when green flag clicked.",
+      "Set score to 0 at the start.",
+      "Add change score by 1 and test how the value changes.",
+    ],
+    practiceTask:
+      "Create a variable called score and make it start at 0 when the green flag is clicked.",
+    challengeTask:
+      "Add a second variable called lives and decide how both variables should be used in a simple game idea.",
+    keyQuestion: "Why is a variable useful in a game project?",
+    misconception:
+      "A variable is not a fixed piece of text. It stores a value that can change while the program runs.",
+    correctOutcome:
+      "The project shows a score variable that starts correctly and changes when the code runs.",
+    wrongOutcome:
+      "The variable is created, but it is not set or changed clearly, so the value does not help the program.",
+    projectLink: "https://scratch.mit.edu/",
+  },
+  {
+    id: 2,
+    week: 2,
+    term: "Summer Term 1",
+    platform: "Scratch",
+    title: "Setting and Changing Variables",
+    shortTitle: "Set vs Change",
+    description: "Understanding the difference between setting a value and changing a value.",
+    objective: "I can use set and change blocks correctly with a variable.",
+    overview:
+      "Setting a variable gives it an exact starting value. Changing a variable adds or subtracts from its current value.",
+    whyItMatters:
+      "If pupils confuse set and change, scores, timers, and counters will not behave properly.",
+    retrievalQuestion:
+      "What was the name of the variable you created last lesson, and what did it track?",
+    teachingPoints: [
+      "Set gives the variable a precise value such as 0.",
+      "Change adjusts the current value such as +1 or -1.",
+      "Set is useful at the start of a game.",
+      "Change is useful during the game while events happen.",
+    ],
+    vocab: ["set", "change", "counter", "start value", "increase", "decrease"],
+    guidedSteps: [
+      "Open your Scratch project from last lesson or make a new one.",
+      "Create a variable called points.",
+      "Add when green flag clicked.",
+      "Use set points to 0.",
+      "Add another event such as when this sprite clicked.",
+      "Use change points by 1.",
+      "Test the project by clicking the sprite.",
+      "Now add another block that changes points by -1 and compare the effect.",
+    ],
+    practiceTask:
+      "Build a mini counter where clicking a sprite increases a variable by 1.",
+    challengeTask:
+      "Create a project with two buttons: one increases points and one decreases points.",
+    keyQuestion: "When should a programmer use set instead of change?",
+    misconception:
+      "Set and change do not do the same job. Set replaces the value; change adjusts the current value.",
+    correctOutcome:
+      "The variable starts at the correct value and then changes logically during the project.",
+    wrongOutcome:
+      "The variable keeps resetting when it should be increasing, or keeps increasing when it should restart.",
+    projectLink: "https://scratch.mit.edu/",
+  },
+  {
+    id: 3,
+    week: 3,
+    term: "Summer Term 1",
+    platform: "Scratch",
+    title: "Using a Variable for Score",
+    shortTitle: "Score System",
+    description: "Applying variables in a simple scoring game.",
+    objective: "I can use a variable to track score in a game.",
+    overview:
+      "A score system rewards actions. Scratch can add to a score whenever a player completes a successful action.",
+    whyItMatters:
+      "This is one of the clearest real uses of variables in game design.",
+    retrievalQuestion:
+      "What is the difference between setting a variable and changing a variable?",
+    teachingPoints: [
+      "The score must be reset at the start.",
+      "The score should increase only when the correct event happens.",
+      "The event might be touching an object, clicking a sprite, or collecting an item.",
+      "The code should avoid accidental double-counting where possible.",
+    ],
+    vocab: ["score", "event", "collect", "reward", "collision", "reset"],
+    guidedSteps: [
+      "Create a variable called score if you do not already have one.",
+      "Set score to 0 when the green flag is clicked.",
+      "Choose a sprite to collect.",
+      "Add code that checks for a successful event, such as touching another sprite.",
+      "When the event happens, change score by 1.",
+      "Move or hide the collected item so the score does not increase endlessly from one touch.",
+      "Test the game several times.",
+      "Watch how the score changes as events happen.",
+    ],
+    practiceTask:
+      "Make a simple game where score increases when the player collects or clicks something correctly.",
+    challengeTask:
+      "Add a target score and a winning message when the score reaches it.",
+    keyQuestion: "How does a score variable make a game feel more interactive?",
+    misconception:
+      "A score should not increase all the time. It should only change when the intended event happens.",
+    correctOutcome:
+      "The score starts at 0 and increases only when the correct game action takes place.",
+    wrongOutcome:
+      "The score increases too often, never resets, or does not match the player’s actions.",
+    projectLink: "https://scratch.mit.edu/",
+  },
+  {
+    id: 4,
+    week: 4,
+    term: "Summer Term 1",
+    platform: "Scratch",
+    title: "Using a Variable for Lives",
+    shortTitle: "Lives and Health",
+    description: "Tracking mistakes or damage using a variable.",
+    objective: "I can use a variable to reduce lives when something goes wrong.",
+    overview:
+      "A lives variable makes a game more meaningful because it can measure mistakes, damage, or missed chances.",
+    whyItMatters:
+      "Variables are not only for rewards. They can also track risk, challenge, and game over states.",
+    retrievalQuestion:
+      "In your own words, how is a lives variable different from a score variable?",
+    teachingPoints: [
+      "Lives usually begin at a set number such as 3.",
+      "Lives should decrease only when the player makes a mistake or meets danger.",
+      "If lives reach 0, the game may stop or show a message.",
+      "Variables help control game flow, not just display numbers.",
+    ],
+    vocab: ["lives", "health", "penalty", "game over", "decrease", "condition"],
+    guidedSteps: [
+      "Create a variable called lives.",
+      "Set lives to 3 when the green flag is clicked.",
+      "Choose an event that counts as a mistake, such as touching an enemy.",
+      "When that event happens, change lives by -1.",
+      "Add a check to see whether lives = 0.",
+      "If lives = 0, make the sprite say Game Over or stop the project.",
+      "Test what happens after one, two, and three mistakes.",
+      "Check that lives never start with the wrong value.",
+    ],
+    practiceTask:
+      "Add a lives system to a simple game and reduce lives when the player touches danger.",
+    challengeTask:
+      "Use both score and lives in the same project and decide which one matters most to winning.",
+    keyQuestion: "Why does a lives variable change the way a player behaves in a game?",
+    misconception:
+      "Lives should not decrease randomly. They must be linked to a clear event or rule in the code.",
+    correctOutcome:
+      "Lives start correctly, decrease when danger is touched, and trigger a game over when they reach 0.",
+    wrongOutcome:
+      "Lives fall too fast, never decrease, or the game over state does not connect to the variable.",
+    projectLink: "https://scratch.mit.edu/",
+  },
+  {
+    id: 5,
+    week: 5,
+    term: "Summer Term 1",
+    platform: "Scratch",
+    title: "Variables with Conditions",
+    shortTitle: "If + Variables",
+    description: "Using variables inside decision-making code.",
+    objective: "I can use a variable in an if statement to control what happens next.",
+    overview:
+      "A variable becomes more powerful when the program uses its value to make decisions. For example, if score = 10, the player wins.",
+    whyItMatters:
+      "This is where tracking data connects to computational thinking and logic.",
+    retrievalQuestion:
+      "What does a condition do, and how could it work with a score or lives variable?",
+    teachingPoints: [
+      "Conditions ask true/false questions.",
+      "Variables can be compared using =, >, and <.",
+      "This allows the project to respond differently depending on the value.",
+      "Game win and lose states often depend on variable conditions.",
+    ],
+    vocab: ["condition", "compare", "greater than", "equal to", "logic", "state"],
+    guidedSteps: [
+      "Open a project with a variable such as score or lives.",
+      "Add a condition such as if score = 5 then.",
+      "Place an action inside the if block, such as say You win.",
+      "Try a second version using if lives < 1 then.",
+      "Change the variable during the game so the condition can become true.",
+      "Test whether the message appears at the correct time.",
+      "Adjust the compared value if needed.",
+      "Retest carefully.",
+    ],
+    practiceTask:
+      "Use a variable inside an if statement to trigger a win or lose message.",
+    challengeTask:
+      "Create two different conditions in the same project, one for winning and one for losing.",
+    keyQuestion: "Why does comparing a variable help a program make decisions?",
+    misconception:
+      "A variable on its own does not create a decision. The program must compare its value in a condition.",
+    correctOutcome:
+      "The project reacts only when the variable reaches the intended value.",
+    wrongOutcome:
+      "The project reacts too early, too late, or not at all because the condition is incorrect.",
+    projectLink: "https://scratch.mit.edu/",
+  },
+  {
+    id: 6,
+    week: 6,
+    term: "Summer Term 1",
+    platform: "Scratch",
+    title: "Designing a Variable-Based Game",
+    shortTitle: "Plan Before Code",
+    description: "Planning how variables, events, and conditions will work together.",
+    objective: "I can plan a game that uses variables clearly before building it.",
+    overview:
+      "Good programs are planned. Pupils should decide what to track, how values change, and what conditions matter before building everything.",
+    whyItMatters:
+      "Planning prevents messy code and helps pupils think like programmers rather than random block collectors.",
+    retrievalQuestion:
+      "What is one good reason to use both variables and conditions in a project?",
+    teachingPoints: [
+      "A game plan should include goal, rules, variables, and win/lose conditions.",
+      "Different variables do different jobs.",
+      "The order of events matters.",
+      "A clear algorithm makes the build easier.",
+    ],
+    vocab: ["algorithm", "plan", "flow", "rule", "goal", "sequence"],
+    guidedSteps: [
+      "Choose a simple game idea.",
+      "Write down the player goal.",
+      "Decide which variable or variables the game needs.",
+      "Decide when each variable changes.",
+      "Write a win condition and a lose condition.",
+      "Sketch the order of events from start to finish.",
+      "Match your plan to Scratch blocks you expect to use.",
+      "Only after planning, begin building.",
+    ],
+    practiceTask:
+      "Create a clear plan for a game that uses at least one variable and one condition.",
+    challengeTask:
+      "Plan a game that uses two variables and explain how both affect the outcome.",
+    keyQuestion: "Why is planning especially important once a project has more than one variable?",
+    misconception:
+      "Planning is not extra work to avoid. It is part of programming well.",
+    correctOutcome:
+      "The pupil can explain what each variable does and how the project should behave before coding.",
+    wrongOutcome:
+      "The project idea exists, but the rules, values, and conditions are unclear or contradictory.",
+    projectLink: "https://scratch.mit.edu/",
+  },
+  {
+    id: 7,
+    week: 7,
+    term: "Summer Term 1",
+    platform: "Scratch",
+    title: "Debugging Variables",
+    shortTitle: "Fix the Logic",
+    description: "Testing and fixing projects that use score, lives, and conditions.",
+    objective: "I can spot and fix mistakes in code that uses variables.",
+    overview:
+      "Variable bugs often look like wrong scores, endless counting, or a game over appearing too early. Debugging means testing methodically and fixing the real cause.",
+    whyItMatters:
+      "Programming is not just writing code. It is also checking whether the code behaves as intended.",
+    retrievalQuestion:
+      "What is one common mistake that could make a score variable behave incorrectly?",
+    teachingPoints: [
+      "Start by identifying exactly what is wrong.",
+      "Test one part at a time.",
+      "Check start values, change values, and conditions.",
+      "Do not change everything at once.",
+    ],
+    vocab: ["debug", "test", "logic error", "trace", "fix", "behaviour"],
+    guidedSteps: [
+      "Run the project and observe carefully.",
+      "Check whether the variable starts with the correct value.",
+      "Trigger the event that should change the variable.",
+      "Notice whether the value changes by the correct amount.",
+      "Check any if statements that compare the variable.",
+      "Change one piece of code only.",
+      "Retest after the change.",
+      "Repeat until the project behaves as planned.",
+    ],
+    practiceTask:
+      "Test a variable-based game and fix at least one bug affecting score, lives, or win/lose logic.",
+    challengeTask:
+      "Intentionally create a bug, swap projects with a partner, and explain how to debug it logically.",
+    keyQuestion: "Why should a programmer change only one thing at a time while debugging?",
+    misconception:
+      "Debugging is not guessing. It is careful testing, identifying the cause, and making a controlled fix.",
+    correctOutcome:
+      "The variable system behaves reliably because the pupil tested and fixed the real problem.",
+    wrongOutcome:
+      "The code changes repeatedly without a clear reason, so the bug stays hidden or new bugs appear.",
+    projectLink: "https://scratch.mit.edu/",
+  },
+  {
+    id: 8,
+    week: 1,
+    term: "Summer Term 2",
+    platform: "MakeCode",
+    title: "Introduction to Micro:bit",
+    shortTitle: "Input → Process → Output",
+    description: "Beginning MakeCode and understanding how a physical device responds to code.",
+    objective: "I can explain input, process, and output on a micro:bit.",
+    overview:
+      "The micro:bit is a physical computing device. It can receive input, process instructions, and produce output such as lights or text.",
+    whyItMatters:
+      "This moves programming beyond the screen and helps pupils understand real-world devices.",
+    retrievalQuestion:
+      "Can you name one device in everyday life that uses input, processing, and output?",
+    teachingPoints: [
+      "Input is what the device detects or receives.",
+      "Processing is the code making a decision.",
+      "Output is what the device does in response.",
+      "The emulator helps pupils test code before using a real device.",
+    ],
+    vocab: ["input", "process", "output", "device", "emulator", "LED"],
+    guidedSteps: [
+      "Open Microsoft MakeCode for micro:bit.",
+      "Start a new project.",
+      "Find the on start block.",
+      "Add a basic show leds block.",
+      "Create a simple LED pattern such as a heart or smile.",
+      "Run the code in the emulator.",
+      "Change the pattern and test again.",
+      "Discuss what the input, process, and output are in this example.",
+    ],
+    practiceTask:
+      "Create a MakeCode project that shows a clear LED pattern when the program starts.",
+    challengeTask:
+      "Make the micro:bit show two different LED patterns in sequence and explain the output clearly.",
+    keyQuestion: "How is programming a micro:bit different from programming only on the screen?",
+    misconception:
+      "The micro:bit is not magic hardware. It still follows precise instructions written by the programmer.",
+    correctOutcome:
+      "The project runs in the emulator and the pupil can explain the output produced by the code.",
+    wrongOutcome:
+      "The pupil places blocks randomly without understanding what the device is supposed to do.",
+    projectLink: "https://makecode.microbit.org/",
+  },
+  {
+    id: 9,
+    week: 2,
+    term: "Summer Term 2",
+    platform: "MakeCode",
+    title: "Selection and Flow in MakeCode",
+    shortTitle: "If... Then... Else",
+    description: "Using conditions to control what a micro:bit does.",
+    objective: "I can use if... then... else to control program flow in MakeCode.",
+    overview:
+      "A micro:bit can make decisions using conditional logic. For example, if button A is pressed then show one pattern, else show another.",
+    whyItMatters:
+      "Selection is essential for building responsive devices rather than one fixed display.",
+    retrievalQuestion:
+      "What does a condition do in code, and where have you used one before?",
+    teachingPoints: [
+      "Selection controls flow.",
+      "The program checks whether a condition is true or false.",
+      "The then path runs when true.",
+      "The else path runs when false.",
+    ],
+    vocab: ["selection", "condition", "flow", "true", "false", "branch"],
+    guidedSteps: [
+      "Open a new MakeCode project.",
+      "Find an input block such as button A pressed.",
+      "Add an if then else block.",
+      "Use a condition related to a button or input.",
+      "Place one output in the then branch.",
+      "Place a different output in the else branch.",
+      "Test the project in the emulator.",
+      "Change the condition or output and compare the results.",
+    ],
+    practiceTask:
+      "Build a project where the micro:bit shows one output for one condition and a different output otherwise.",
+    challengeTask:
+      "Add a second decision so the micro:bit can respond in more than one way to user input.",
+    keyQuestion: "Why is an else path useful when controlling a device?",
+    misconception:
+      "Else is not extra decoration. It handles what should happen when the condition is false.",
+    correctOutcome:
+      "The device responds differently depending on whether the condition is met.",
+    wrongOutcome:
+      "The same output appears every time because the program is not branching correctly.",
+    projectLink: "https://makecode.microbit.org/",
+  },
+  {
+    id: 10,
+    week: 3,
+    term: "Summer Term 2",
+    platform: "MakeCode",
+    title: "Sensing Inputs",
+    shortTitle: "Buttons and Motion",
+    description: "Using button presses and movement as inputs for a program.",
+    objective: "I can use inputs such as buttons and motion to control a micro:bit.",
+    overview:
+      "The micro:bit includes built-in inputs such as buttons and an accelerometer. These allow the device to react to human actions and movement.",
+    whyItMatters:
+      "Sensing makes physical computing interactive and responsive.",
+    retrievalQuestion:
+      "What is the difference between input and output in a physical device?",
+    teachingPoints: [
+      "Buttons are simple digital inputs.",
+      "Motion can be detected through the accelerometer.",
+      "The program responds only when a chosen trigger happens.",
+      "Different inputs can produce different outputs.",
+    ],
+    vocab: ["sensor", "trigger", "input", "button", "accelerometer", "motion"],
+    guidedSteps: [
+      "Start a new MakeCode project.",
+      "Use on button A pressed and add an LED output.",
+      "Test the button response in the emulator.",
+      "Now add an input gesture such as shake.",
+      "Give the shake gesture a different output.",
+      "Test both inputs separately.",
+      "Check that each input causes the correct output.",
+      "Explain how the device knows which event happened.",
+    ],
+    practiceTask:
+      "Create a micro:bit project that responds to both a button press and a movement gesture.",
+    challengeTask:
+      "Combine two different inputs in one project and make the outputs clearly different.",
+    keyQuestion: "Why are sensors important in physical computing?",
+    misconception:
+      "The micro:bit does not guess. It only reacts when the programmed input condition is triggered.",
+    correctOutcome:
+      "The device responds correctly to more than one type of input.",
+    wrongOutcome:
+      "The device always shows the same output because the inputs are not linked properly.",
+    projectLink: "https://makecode.microbit.org/",
+  },
+  {
+    id: 11,
+    week: 4,
+    term: "Summer Term 2",
+    platform: "MakeCode",
+    title: "Variables and Logic in MakeCode",
+    shortTitle: "Count and Compare",
+    description: "Using variables with movement and conditions on a micro:bit.",
+    objective: "I can create a variable in MakeCode and use it in a condition.",
+    overview:
+      "Variables in MakeCode can track changing values in a physical device, such as the number of shakes or steps. Conditions can then compare that value to decide what happens next.",
+    whyItMatters:
+      "This joins the Year 6 ideas together: changing values, logic, and real-world input.",
+    retrievalQuestion:
+      "How could a micro:bit use a variable in the same way that a Scratch game uses score?",
+    teachingPoints: [
+      "Variables can count physical events such as button presses or movements.",
+      "A condition can compare the variable to a target value.",
+      "The output can change when the target is reached.",
+      "This is the foundation of a step counter.",
+    ],
+    vocab: ["variable", "value", "compare", "count", "target", "logic"],
+    guidedSteps: [
+      "Open a new MakeCode project.",
+      "Create a variable called steps or count.",
+      "Set the variable to 0 when the program starts.",
+      "Use an input such as shake to change the variable by 1.",
+      "Add a condition such as if steps > 9 then.",
+      "Place an output inside the condition, such as show number or show icon.",
+      "Test the project in the emulator.",
+      "Watch how the variable changes and when the output happens.",
+    ],
+    practiceTask:
+      "Build a project that counts an input and responds when the value reaches a chosen target.",
+    challengeTask:
+      "Use two conditions with the same variable, such as one output at 5 and another at 10.",
+    keyQuestion: "Why is a variable especially useful in a physical device that senses movement?",
+    misconception:
+      "The sensor detects the event, but the variable tracks how many times it has happened.",
+    correctOutcome:
+      "The micro:bit counts physical input and changes its behaviour based on the variable value.",
+    wrongOutcome:
+      "The project senses the input, but it does not store or compare the count correctly.",
+    projectLink: "https://makecode.microbit.org/",
+  },
+  {
+    id: 12,
+    week: 5,
+    term: "Summer Term 2",
+    platform: "MakeCode",
+    title: "Designing a Step Counter",
+    shortTitle: "Final Design",
+    description: "Planning a simple micro:bit step counter using input, variables, and output.",
+    objective: "I can design a step counter algorithm using variables and sensing.",
+    overview:
+      "A step counter needs an input, a variable to track count, and an output to tell the user the result. The program must be planned carefully so each part works together.",
+    whyItMatters:
+      "This is the final Year 6 application of variables and sensing in a purposeful real-world project.",
+    retrievalQuestion:
+      "Which three parts must every step counter have: input, variable, and what else?",
+    teachingPoints: [
+      "The design should identify the input clearly.",
+      "The variable tracks the count.",
+      "The output tells the user the result or progress.",
+      "Good design makes implementation easier and debugging faster.",
+    ],
+    vocab: ["algorithm", "design", "step counter", "input", "output", "system"],
+    guidedSteps: [
+      "Decide which input will count as a step, such as shake or movement.",
+      "Create a variable name such as steps.",
+      "Decide how the steps variable changes.",
+      "Choose how the device will show progress or final output.",
+      "Write a simple if condition that uses the variable.",
+      "Plan what happens at the start of the program.",
+      "Plan what happens each time movement is detected.",
+      "Review whether the input, variable, and output all connect logically.",
+    ],
+    practiceTask:
+      "Plan a clear step counter algorithm showing input, variable changes, and output.",
+    challengeTask:
+      "Extend the design so the counter resets, celebrates a target number, or responds differently at different milestones.",
+    keyQuestion: "Why is planning important before building a device such as a step counter?",
+    misconception:
+      "A working device still needs a clear design. Planning is part of strong programming, not separate from it.",
+    correctOutcome:
+      "The pupil can explain how the step counter should work from start to finish before building it.",
+    wrongOutcome:
+      "The pupil has an idea but cannot explain how the input, variable, and output work together.",
+    projectLink: "https://makecode.microbit.org/",
+  },
+];
+
+const quizBank: Record<number, QuizQuestion[]> = {
+  1: [
+    {
+      prompt: "What is a variable in programming?",
+      options: [
+        "A named place that stores a value",
+        "A type of sprite costume",
+        "A sound effect",
+        "A backdrop tool",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which is the best example of a game variable?",
+      options: ["score", "stage colour", "sprite costume design", "pen colour only"],
+      answer: 0,
+    },
+    {
+      prompt: "Why are variables useful in games?",
+      options: [
+        "They track values that change while the game runs",
+        "They make sprites larger automatically",
+        "They stop all bugs",
+        "They replace all events",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which value is most likely to change during play?",
+      options: ["lives", "project title", "teacher name", "computer brand"],
+      answer: 0,
+    },
+    {
+      prompt: "What should a pupil understand about a variable?",
+      options: [
+        "It stores information that can change",
+        "It is always fixed forever",
+        "It only stores pictures",
+        "It only works in maths projects",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which of these is not usually tracked by a variable in a game?",
+      options: ["the classroom door", "score", "timer", "health"],
+      answer: 0,
+    },
+    {
+      prompt: "If a game needs to remember points, what should it use?",
+      options: ["a variable", "a backdrop", "a costume", "a pen stamp"],
+      answer: 0,
+    },
+    {
+      prompt: "Which statement is true?",
+      options: [
+        "Variables can increase, decrease, or reset",
+        "Variables are only for decoration",
+        "Variables cannot change once made",
+        "Variables are the same as sounds",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which word best matches what a variable does?",
+      options: ["stores", "draws", "hides", "deletes"],
+      answer: 0,
+    },
+    {
+      prompt: "In a racing game, which variable would make most sense?",
+      options: ["lap count", "screen brightness", "desk number", "project thumbnail"],
+      answer: 0,
+    },
+  ],
+  2: [
+    {
+      prompt: "What does set score to 0 do?",
+      options: [
+        "Gives score an exact value",
+        "Adds 0 forever",
+        "Deletes the variable",
+        "Makes the variable invisible only",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What does change score by 1 do?",
+      options: [
+        "Adds 1 to the current value",
+        "Always returns the score to 1",
+        "Creates a new variable",
+        "Stops the game",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "When is set usually most useful?",
+      options: [
+        "At the start of a game",
+        "When drawing a backdrop",
+        "When renaming a sprite only",
+        "When exporting a file",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "When is change usually most useful?",
+      options: [
+        "When the value needs to go up or down during play",
+        "When the project is closed",
+        "When the sprite is chosen",
+        "When a background is imported",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "A pupil wants points to begin at zero every time. Which block is best?",
+      options: ["set points to 0", "change points by 0", "hide variable", "show variable"],
+      answer: 0,
+    },
+    {
+      prompt: "What is the main difference between set and change?",
+      options: [
+        "Set replaces the value, change adjusts it",
+        "Set and change always do exactly the same job",
+        "Set is for sound and change is for movement",
+        "Set deletes and change saves",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "If a score should go down by 1, which block is most suitable?",
+      options: ["change score by -1", "set score to -1", "show score", "make a variable"],
+      answer: 0,
+    },
+    {
+      prompt: "What problem happens if a score is set to 0 every time a sprite is clicked?",
+      options: [
+        "The score keeps resetting instead of building up",
+        "The score becomes invisible only",
+        "The sprite disappears",
+        "The project cannot save",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which statement shows correct variable thinking?",
+      options: [
+        "Set gives a start point and change updates from there",
+        "Set should always replace change",
+        "Change should always replace set",
+        "Variables never need start values",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "A counter that rises with every click mostly needs which block during the game?",
+      options: ["change", "set only", "hide", "broadcast only"],
+      answer: 0,
+    },
+  ],
+  3: [
+    {
+      prompt: "What should a score variable usually do at the start of a game?",
+      options: ["start at 0", "start at 100 automatically", "hide forever", "delete itself"],
+      answer: 0,
+    },
+    {
+      prompt: "When should a score increase?",
+      options: [
+        "When the correct event happens",
+        "All the time",
+        "Only when the green flag is clicked",
+        "When the project closes",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which is a good event for increasing score?",
+      options: [
+        "Collecting an object",
+        "Changing the desktop wallpaper",
+        "Opening Scratch",
+        "Typing the project title",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Why might a score rise too quickly by mistake?",
+      options: [
+        "The same event is being counted repeatedly",
+        "The variable is named clearly",
+        "The score started at zero",
+        "The project was tested",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What is the best reason to use a score system?",
+      options: [
+        "It tracks success in the game",
+        "It replaces the player",
+        "It makes code impossible to debug",
+        "It removes the need for events",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "If a sprite is collected once, what should often happen next?",
+      options: [
+        "It should move or hide so it is not counted endlessly",
+        "Nothing at all",
+        "The project should shut down",
+        "The score should reset immediately",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What is a target score?",
+      options: [
+        "A value the player aims to reach",
+        "The colour of the score monitor",
+        "A type of costume",
+        "A sound effect",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which statement is strongest?",
+      options: [
+        "A score variable should match the player’s successful actions",
+        "A score should rise randomly to keep the game interesting",
+        "A score should never change after the start",
+        "A score is only for advanced adult programmers",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What would make a score system feel unfair?",
+      options: [
+        "Points appear without the player doing the right action",
+        "The score starts at zero",
+        "The game shows the score clearly",
+        "The code uses events",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What is the main idea of this lesson?",
+      options: [
+        "Using a variable to track score in a game",
+        "Drawing a new background",
+        "Adding many costumes",
+        "Creating text boxes only",
+      ],
+      answer: 0,
+    },
+  ],
+  4: [
+    {
+      prompt: "What does a lives variable usually track?",
+      options: [
+        "How many chances the player has left",
+        "The number of backdrops",
+        "The sound volume",
+        "The name of the player",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What is a sensible start value for lives in a simple game?",
+      options: ["3", "undefined forever", "1000 always", "no value at all"],
+      answer: 0,
+    },
+    {
+      prompt: "When should lives decrease?",
+      options: [
+        "When the player makes a mistake or hits danger",
+        "Whenever the mouse moves",
+        "At random",
+        "Only when the program opens",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which block would often reduce lives by one?",
+      options: ["change lives by -1", "set lives to 100", "hide lives", "make a list"],
+      answer: 0,
+    },
+    {
+      prompt: "What should often happen when lives reach 0?",
+      options: [
+        "The game should end or show a lose message",
+        "The score should become a backdrop",
+        "The keyboard should lock",
+        "The variable should become a sound",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "How is lives different from score?",
+      options: [
+        "Lives often measure mistakes, while score often measures success",
+        "Lives and score always mean exactly the same thing",
+        "Lives cannot be variables",
+        "Score cannot be used in games",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What would be poor design for a lives system?",
+      options: [
+        "Lives drop without any clear event causing it",
+        "Lives begin at a chosen start value",
+        "Lives reduce after touching danger",
+        "Lives are checked with a condition",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Why do lives increase challenge in a game?",
+      options: [
+        "They make mistakes matter",
+        "They remove all rules",
+        "They stop the player from learning",
+        "They replace all events",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which condition is useful for a lives system?",
+      options: ["if lives = 0", "if backdrop = blue", "if pen down", "if costume = 1 always"],
+      answer: 0,
+    },
+    {
+      prompt: "What is the lesson mainly about?",
+      options: [
+        "Using a variable to track mistakes or damage",
+        "Designing a title screen only",
+        "Recording voices",
+        "Changing fonts",
+      ],
+      answer: 0,
+    },
+  ],
+  5: [
+    {
+      prompt: "What does a condition do?",
+      options: [
+        "Checks whether something is true or false",
+        "Draws a sprite",
+        "Creates a new project automatically",
+        "Deletes variables",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which comparison could be used with a score variable?",
+      options: ["score = 10", "show score", "make a variable", "say score"],
+      answer: 0,
+    },
+    {
+      prompt: "Why use a variable inside an if statement?",
+      options: [
+        "To make a decision based on the value",
+        "To colour the stage",
+        "To rename the sprite",
+        "To avoid using logic",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What might happen if score = 10 is true?",
+      options: [
+        "The game could show a winning message",
+        "The computer turns off",
+        "All variables disappear",
+        "The class changes automatically",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which symbol means greater than?",
+      options: [">", "=", "+", "/"],
+      answer: 0,
+    },
+    {
+      prompt: "What is needed before a variable can control game flow?",
+      options: [
+        "It must be compared in a condition",
+        "It must be hidden forever",
+        "It must be turned into text",
+        "It must be deleted",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "If lives < 1, what might that mean in a game?",
+      options: [
+        "The player has no lives left",
+        "The score is increasing",
+        "The sprite should move faster",
+        "The game has no variables",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which statement is correct?",
+      options: [
+        "Variables and conditions work together to control outcomes",
+        "Variables remove the need for all conditions",
+        "Conditions cannot use variables",
+        "A game can never use both score and logic",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What mistake should pupils avoid?",
+      options: [
+        "Thinking the variable alone makes the decision",
+        "Testing their code",
+        "Using a clear target value",
+        "Resetting a score at the start",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What is the main focus of this lesson?",
+      options: [
+        "Using variables inside decisions",
+        "Changing costume colours",
+        "Importing sounds only",
+        "Creating a username screen",
+      ],
+      answer: 0,
+    },
+  ],
+  6: [
+    {
+      prompt: "Why is planning a game important?",
+      options: [
+        "It helps the code stay logical and organised",
+        "It makes coding unnecessary",
+        "It removes all mistakes instantly",
+        "It is only for teachers",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What should be planned before building?",
+      options: [
+        "Variables, rules, and win/lose conditions",
+        "Only the sprite colour",
+        "Only the classroom seating plan",
+        "Only the computer password",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "A game plan should explain what?",
+      options: [
+        "What the player is trying to do",
+        "Which desk is nearest the wall",
+        "How loud the room is",
+        "What brand the monitor is",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What is an algorithm?",
+      options: [
+        "A sequence of steps for a process or program",
+        "A kind of background image",
+        "A sound effect",
+        "A projector cable",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Why is planning even more important with two variables?",
+      options: [
+        "Because the logic becomes more complex",
+        "Because two variables cannot be used together",
+        "Because Scratch will block the project",
+        "Because planning is only for maths",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What could a good plan include?",
+      options: [
+        "When the score rises and when lives fall",
+        "Only the teacher name",
+        "Only the colour theme",
+        "Only how to log in",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What is poor planning likely to cause?",
+      options: [
+        "Confusing or messy code",
+        "Automatic success",
+        "Better debugging immediately",
+        "Perfect logic without testing",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which statement best matches this lesson?",
+      options: [
+        "Good programmers think before they build",
+        "Real programmers never plan",
+        "Planning stops creativity completely",
+        "Variables do not need rules",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "A game idea has score but no lose state. What is missing?",
+      options: ["Part of the design thinking", "A mouse", "A costume", "A list block"],
+      answer: 0,
+    },
+    {
+      prompt: "What is the main focus here?",
+      options: [
+        "Planning a variable-based game before coding",
+        "Recording audio",
+        "Making title art only",
+        "Changing desktop settings",
+      ],
+      answer: 0,
+    },
+  ],
+  7: [
+    {
+      prompt: "What does debugging mean?",
+      options: [
+        "Finding and fixing problems in code",
+        "Making a project look pretty",
+        "Deleting all variables",
+        "Adding random blocks quickly",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What should a pupil check first in a broken variable system?",
+      options: [
+        "Whether the starting value and changes are correct",
+        "The classroom temperature",
+        "The stage colour only",
+        "The font on the screen",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Why is it good to change one thing at a time?",
+      options: [
+        "So you know what caused the fix",
+        "So the bug becomes harder to find",
+        "So the project gets more random",
+        "So testing is no longer needed",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which is an example of a variable bug?",
+      options: [
+        "Score rises too many times from one event",
+        "The desk is slightly untidy",
+        "The pupil changed their seat",
+        "The mouse pad moved",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "If a winning message appears too early, what is worth checking?",
+      options: [
+        "The condition comparing the variable",
+        "The school logo",
+        "The laptop sticker",
+        "The browser window size",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which is the best debugging habit?",
+      options: [
+        "Test, observe, change one part, and retest",
+        "Guess wildly and hope",
+        "Delete everything immediately",
+        "Never run the project",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What is a logic error?",
+      options: [
+        "The code runs but behaves incorrectly",
+        "The screen is dusty",
+        "The internet is fast",
+        "The project has a title",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What mistake should pupils avoid during debugging?",
+      options: [
+        "Changing many things at once without understanding the cause",
+        "Testing carefully",
+        "Checking conditions",
+        "Watching the variable value",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Why is debugging part of programming?",
+      options: [
+        "Because programs must be tested and improved",
+        "Because code always works perfectly first time",
+        "Because variables should never be used",
+        "Because planning is not needed",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "This lesson is mainly about:",
+      options: [
+        "Testing and fixing variable logic",
+        "Creating fancy title screens only",
+        "Choosing music tracks",
+        "Changing password settings",
+      ],
+      answer: 0,
+    },
+  ],
+  8: [
+    {
+      prompt: "In physical computing, what is an input?",
+      options: [
+        "Something the device receives or detects",
+        "A sound the device makes",
+        "A picture on the screen",
+        "The project name",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What is an output on a micro:bit?",
+      options: [
+        "Something the device does in response, such as showing LEDs",
+        "A desk in the classroom",
+        "The browser tab",
+        "The code title only",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What is the emulator used for?",
+      options: [
+        "Testing the program on screen",
+        "Replacing all code",
+        "Printing worksheets",
+        "Changing the computer keyboard",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which block often appears at the start of a MakeCode project?",
+      options: ["on start", "game over", "paint stage", "rename class"],
+      answer: 0,
+    },
+    {
+      prompt: "What is a simple first output for a micro:bit?",
+      options: [
+        "An LED pattern",
+        "A full website",
+        "A printed certificate",
+        "A speaker tower",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which sequence is correct?",
+      options: [
+        "input → process → output",
+        "output → input → process",
+        "process → output → input only",
+        "variable → costume → microphone",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "How is a micro:bit project different from a simple Scratch display?",
+      options: [
+        "It controls a physical device and its outputs",
+        "It cannot use code",
+        "It has no events",
+        "It never needs testing",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What should pupils understand in this lesson?",
+      options: [
+        "Devices still follow precise instructions from code",
+        "Devices always know what to do without code",
+        "Physical computing removes the need for logic",
+        "Inputs and outputs are the same thing",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What is the main purpose of the LED grid in early lessons?",
+      options: [
+        "To provide visible output",
+        "To store class names",
+        "To hide variables",
+        "To remove buttons",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "This lesson is mainly about:",
+      options: [
+        "Understanding input, process, and output on micro:bit",
+        "Drawing a poster",
+        "Editing a video",
+        "Making a spreadsheet",
+      ],
+      answer: 0,
+    },
+  ],
+  9: [
+    {
+      prompt: "What does if... then... else allow a program to do?",
+      options: [
+        "Choose between different outcomes",
+        "Delete the project",
+        "Avoid all input",
+        "Replace all outputs",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "When does the else path run?",
+      options: [
+        "When the condition is false",
+        "When the condition is true",
+        "Before the code starts",
+        "Only after saving",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which input is useful for a simple MakeCode condition?",
+      options: ["button A", "desk colour", "teacher email", "font size"],
+      answer: 0,
+    },
+    {
+      prompt: "Why is selection important in physical computing?",
+      options: [
+        "It lets the device react differently depending on what happens",
+        "It removes all need for code",
+        "It makes the hardware invisible",
+        "It stops all tests",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What should happen in a good else branch?",
+      options: [
+        "A meaningful alternative output",
+        "Nothing planned at all",
+        "A classroom bell",
+        "A deleted variable",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What does flow mean in this lesson?",
+      options: [
+        "The order and path the code follows",
+        "How bright the screen is",
+        "How fast the internet is",
+        "How many pupils are present",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "If button A is pressed then show a heart, else show a square. What changes the output?",
+      options: ["The condition result", "The project title", "The browser name", "The device colour"],
+      answer: 0,
+    },
+    {
+      prompt: "What should pupils avoid misunderstanding?",
+      options: [
+        "Else is an important second path, not an optional decoration",
+        "Else means repeat forever",
+        "Else is only for adults",
+        "Else creates a variable automatically",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which statement is strongest?",
+      options: [
+        "Selection controls the device’s behaviour logically",
+        "Selection is only for making the code longer",
+        "Selection removes all sensors",
+        "Selection is never useful in real devices",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "This lesson mainly develops:",
+      options: [
+        "decision-making in MakeCode",
+        "sound recording",
+        "typing speed",
+        "spreadsheet formulas",
+      ],
+      answer: 0,
+    },
+  ],
+  10: [
+    {
+      prompt: "What is a sensor input?",
+      options: [
+        "Information the device detects from actions or movement",
+        "A decoration on the stage",
+        "A saved screenshot",
+        "A spreadsheet row",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which is a built-in input on a micro:bit?",
+      options: ["button press", "printer cable", "monitor stand", "desk drawer"],
+      answer: 0,
+    },
+    {
+      prompt: "What can the accelerometer detect?",
+      options: ["movement or gesture", "font choice", "browser theme", "school logo"],
+      answer: 0,
+    },
+    {
+      prompt: "Why are buttons useful in early physical computing projects?",
+      options: [
+        "They provide a clear and simple input",
+        "They replace all variables",
+        "They turn outputs into inputs",
+        "They stop code from running",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Why might a project use both a button and a shake gesture?",
+      options: [
+        "To allow different inputs to produce different responses",
+        "To make the code less clear",
+        "To avoid using output",
+        "To stop the emulator working",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What is a trigger?",
+      options: [
+        "The event that causes code to respond",
+        "A type of background image",
+        "A timer title",
+        "A variable name only",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What does interactive mean in this lesson?",
+      options: [
+        "The device responds to what the user does",
+        "The device ignores all inputs",
+        "The project only shows text once",
+        "The code cannot change",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "If button A and shake both have outputs, what must the code do?",
+      options: [
+        "Link each input to the correct response",
+        "Use the same output for everything without reason",
+        "Delete the inputs",
+        "Avoid testing",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What mistake should pupils avoid?",
+      options: [
+        "Thinking the micro:bit reacts without programmed triggers",
+        "Using more than one input",
+        "Testing in the emulator",
+        "Naming a project clearly",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "This lesson mainly focuses on:",
+      options: [
+        "using buttons and motion as inputs",
+        "editing a web page",
+        "drawing charts",
+        "setting a classroom timer only",
+      ],
+      answer: 0,
+    },
+  ],
+  11: [
+    {
+      prompt: "What is a variable useful for in MakeCode?",
+      options: [
+        "Tracking a changing value such as steps or counts",
+        "Changing the desk position",
+        "Printing worksheets",
+        "Creating internet access",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "If a project counts shakes, what should usually happen first?",
+      options: [
+        "Set the variable to 0 at the start",
+        "Hide the variable and never change it",
+        "Delete the condition",
+        "Remove the input block",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What does change steps by 1 do?",
+      options: [
+        "Adds one to the current count",
+        "Always returns the value to 1",
+        "Deletes the value",
+        "Turns the value into a picture",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Why compare a variable to a target value?",
+      options: [
+        "So the device can decide when to react",
+        "So the code becomes longer only",
+        "So the output disappears forever",
+        "So the input no longer matters",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which comparison fits a milestone output?",
+      options: ["steps > 9", "show leds", "on start", "button A only"],
+      answer: 0,
+    },
+    {
+      prompt: "What is the relationship between the sensor and the variable?",
+      options: [
+        "The sensor detects an event; the variable counts it",
+        "The variable detects the movement and the sensor stores it",
+        "They do the same job",
+        "Neither is needed in physical computing",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Why is this lesson an important Year 6 link?",
+      options: [
+        "It combines variable thinking with physical input and logic",
+        "It removes the need for all previous learning",
+        "It focuses only on decoration",
+        "It replaces MakeCode with spreadsheets",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "If a micro:bit should celebrate at 10 counts, what is required?",
+      options: [
+        "A condition using the variable",
+        "A new school logo",
+        "A desktop wallpaper",
+        "A printed booklet",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What would show weak understanding?",
+      options: [
+        "Thinking the sensor and variable are the same thing",
+        "Explaining that movement changes the count",
+        "Using a start value of zero",
+        "Testing the response",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "This lesson is mainly about:",
+      options: [
+        "using a variable with logic in MakeCode",
+        "adding titles only",
+        "saving screenshots",
+        "creating pupil accounts",
+      ],
+      answer: 0,
+    },
+  ],
+  12: [
+    {
+      prompt: "What are the three key parts of a simple step counter?",
+      options: [
+        "input, variable, output",
+        "music, costume, backdrop",
+        "mouse, keyboard, monitor",
+        "teacher, desk, board",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which input might a step counter use on micro:bit?",
+      options: ["movement or shake", "speaker volume", "font style", "screen size"],
+      answer: 0,
+    },
+    {
+      prompt: "What should the variable usually track?",
+      options: ["number of detected steps", "colour of the LEDs", "name of the project", "device battery type"],
+      answer: 0,
+    },
+    {
+      prompt: "Why does a step counter need output?",
+      options: [
+        "So the user can see the result or progress",
+        "So the variable can be deleted",
+        "So the micro:bit stops working",
+        "So the code has no purpose",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What is the value of planning before building the step counter?",
+      options: [
+        "It makes the system clearer and easier to implement",
+        "It replaces all code forever",
+        "It prevents any testing",
+        "It removes the need for logic",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What might be a useful extension to a step counter?",
+      options: [
+        "Celebrate when a target count is reached",
+        "Delete the count every second randomly",
+        "Remove all outputs",
+        "Ignore movement inputs",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "Which statement is correct?",
+      options: [
+        "A clear design shows how input, variable, and output connect",
+        "A good design does not need an algorithm",
+        "A device should be built without deciding the rules",
+        "Variables are not useful in physical computing",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What would show good design thinking?",
+      options: [
+        "Explaining what happens at start, during movement, and at milestones",
+        "Choosing only a favourite colour",
+        "Typing code without a plan",
+        "Ignoring how the user sees the result",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "What misconception should be avoided?",
+      options: [
+        "Thinking planning is separate from programming quality",
+        "Knowing that variables track values",
+        "Using output to show results",
+        "Choosing an input carefully",
+      ],
+      answer: 0,
+    },
+    {
+      prompt: "The final lesson is mainly about:",
+      options: [
+        "designing a step counter system",
+        "creating a video title",
+        "building a spreadsheet graph",
+        "changing the teacher password",
+      ],
+      answer: 0,
+    },
+  ],
 };
 
 function slugifyName(value: string) {
@@ -1694,13 +1746,11 @@ function slugifyName(value: string) {
 }
 
 function normaliseName(value: string) {
-  return value
-    .trim()
-    .replace(/\s+/g, " ");
+  return value.trim().replace(/\s+/g, " ");
 }
 
 function buildStorageKey(className: string, studentName: string) {
-  return `year5-${className}-${slugifyName(studentName)}`;
+  return `year6-${className}-${slugifyName(studentName)}`;
 }
 
 function getRegistry(): LearnerProfile[] {
@@ -1721,21 +1771,20 @@ function saveRegistry(registry: LearnerProfile[]) {
 
 function addProfileToRegistry(profile: LearnerProfile) {
   const existing = getRegistry();
-  const alreadyExists = existing.some(
-    (item) => item.storageKey === profile.storageKey
-  );
+  const alreadyExists = existing.some((item) => item.storageKey === profile.storageKey);
   if (!alreadyExists) {
-    saveRegistry([...existing, profile].sort((a, b) =>
-      a.studentName.localeCompare(b.studentName)
-    ));
+    saveRegistry(
+      [...existing, profile].sort((a, b) => {
+        if (a.className !== b.className) return a.className.localeCompare(b.className);
+        return a.studentName.localeCompare(b.studentName);
+      })
+    );
   }
 }
 
 function removeProfileFromRegistry(profile: LearnerProfile) {
   const existing = getRegistry();
-  const filtered = existing.filter(
-    (item) => item.storageKey !== profile.storageKey
-  );
+  const filtered = existing.filter((item) => item.storageKey !== profile.storageKey);
   saveRegistry(filtered);
 }
 
@@ -1750,6 +1799,36 @@ function safeParseQuizOrderMap(raw: string | null): QuizOrderMap {
     return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
     return {};
+  }
+}
+
+function safeParseQuizResultMap(raw: string | null): Record<number, QuizResult> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function safeParseScreenshotMap(raw: string | null): ScreenshotMap {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function safeParseNumberArray(raw: string | null): number[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((item) => Number.isInteger(item)) : [];
+  } catch {
+    return [];
   }
 }
 
@@ -1768,7 +1847,7 @@ function buildQuizOrder(questions: QuizQuestion[]): number[][] {
   );
 }
 
-function applyQuizOrder(questions: QuizQuestion[], quizOrder: number[][]) {
+function applyQuizOrder(questions: QuizQuestion[], quizOrder: number[][]): QuizQuestionView[] {
   return questions.map((question, questionIndex) => {
     const savedOrder = quizOrder[questionIndex];
     const validSavedOrder =
@@ -1788,19 +1867,70 @@ function applyQuizOrder(questions: QuizQuestion[], quizOrder: number[][]) {
   });
 }
 
+function getLessonStateLabel(
+  lessonId: number,
+  completed: number[],
+  quizState: Record<number, QuizResult>,
+  questionCount: number
+) {
+  const result = quizState[lessonId];
+  const isCompleted = completed.includes(lessonId);
+
+  if (result?.submitted && questionCount > 0) {
+    const percent = Math.round((result.score / questionCount) * 100);
+    if (percent >= 80) {
+      return {
+        label: "Mastered",
+        bg: "#dcfce7",
+        border: "#86efac",
+        text: "#166534",
+      };
+    }
+    return {
+      label: "Submitted",
+      bg: "#fef3c7",
+      border: "#fcd34d",
+      text: "#92400e",
+    };
+  }
+
+  if (isCompleted) {
+    return {
+      label: "Complete",
+      bg: "#dbeafe",
+      border: "#93c5fd",
+      text: "#1d4ed8",
+    };
+  }
+
+  return {
+    label: "Not started",
+    bg: "#f8fafc",
+    border: "#cbd5e1",
+    text: "#475569",
+  };
+}
+
+function getMasteryText(score: number, total: number) {
+  if (total === 0) return "Not attempted";
+  const percent = Math.round((score / total) * 100);
+  if (percent >= 80) return "Mastered";
+  if (percent >= 60) return "Developing well";
+  if (percent >= 40) return "Working towards security";
+  return "Needs review";
+}
+
 export default function Home() {
   const [selectedLessonId, setSelectedLessonId] = useState(1);
   const [completed, setCompleted] = useState<number[]>([]);
   const [quizState, setQuizState] = useState<Record<number, QuizResult>>({});
-  const [currentAnswers, setCurrentAnswers] = useState<Record<number, number[]>>(
-    {}
-  );
+  const [currentAnswers, setCurrentAnswers] = useState<Record<number, number[]>>({});
   const [screenshots, setScreenshots] = useState<ScreenshotMap>({});
   const [quizOrderMap, setQuizOrderMap] = useState<QuizOrderMap>({});
   const [profile, setProfile] = useState<LearnerProfile | null>(null);
 
   const [startMode, setStartMode] = useState<StartMode>("existing");
-  const [setupClass, setSetupClass] = useState<string>("");
+  const [setupClass, setSetupClass] = useState<string>(CLASS_OPTIONS[0]);
   const [setupStudentName, setSetupStudentName] = useState("");
   const [existingClass, setExistingClass] = useState<string>(CLASS_OPTIONS[0]);
   const [registry, setRegistry] = useState<LearnerProfile[]>([]);
@@ -1816,6 +1946,7 @@ export default function Home() {
         setProfile(parsed);
         setSetupClass(parsed.className);
         setSetupStudentName(parsed.studentName);
+        setExistingClass(parsed.className);
       } catch {
         localStorage.removeItem(CURRENT_PROFILE_KEY);
       }
@@ -1829,51 +1960,35 @@ export default function Home() {
 
     const savedProgress = localStorage.getItem(`${profile.storageKey}-progress`);
     const savedQuiz = localStorage.getItem(`${profile.storageKey}-quiz-results`);
-    const savedScreenshots = localStorage.getItem(
-      `${profile.storageKey}-screenshots`
-    );
-    const savedQuizOrder = localStorage.getItem(
-      `${profile.storageKey}-quiz-order`
-    );
+    const savedScreenshots = localStorage.getItem(`${profile.storageKey}-screenshots`);
+    const savedQuizOrder = localStorage.getItem(`${profile.storageKey}-quiz-order`);
 
-    setCompleted(savedProgress ? JSON.parse(savedProgress) : []);
-    setQuizState(savedQuiz ? JSON.parse(savedQuiz) : {});
+    setCompleted(safeParseNumberArray(savedProgress));
+    setQuizState(safeParseQuizResultMap(savedQuiz));
     setCurrentAnswers({});
-    setScreenshots(savedScreenshots ? JSON.parse(savedScreenshots) : {});
+    setScreenshots(safeParseScreenshotMap(savedScreenshots));
     setQuizOrderMap(safeParseQuizOrderMap(savedQuizOrder));
     setSelectedLessonId(1);
   }, [profile]);
 
   useEffect(() => {
     if (!profile) return;
-    localStorage.setItem(
-      `${profile.storageKey}-progress`,
-      JSON.stringify(completed)
-    );
+    localStorage.setItem(`${profile.storageKey}-progress`, JSON.stringify(completed));
   }, [completed, profile]);
 
   useEffect(() => {
     if (!profile) return;
-    localStorage.setItem(
-      `${profile.storageKey}-quiz-results`,
-      JSON.stringify(quizState)
-    );
+    localStorage.setItem(`${profile.storageKey}-quiz-results`, JSON.stringify(quizState));
   }, [quizState, profile]);
 
   useEffect(() => {
     if (!profile) return;
-    localStorage.setItem(
-      `${profile.storageKey}-screenshots`,
-      JSON.stringify(screenshots)
-    );
+    localStorage.setItem(`${profile.storageKey}-screenshots`, JSON.stringify(screenshots));
   }, [screenshots, profile]);
 
   useEffect(() => {
     if (!profile) return;
-    localStorage.setItem(
-      `${profile.storageKey}-quiz-order`,
-      JSON.stringify(quizOrderMap)
-    );
+    localStorage.setItem(`${profile.storageKey}-quiz-order`, JSON.stringify(quizOrderMap));
   }, [quizOrderMap, profile]);
 
   const selectedLesson =
@@ -1894,9 +2009,7 @@ export default function Home() {
           return (
             Array.isArray(orderForQuestion) &&
             orderForQuestion.length === question.options.length &&
-            question.options.every((_, optionIndex) =>
-              orderForQuestion.includes(optionIndex)
-            )
+            question.options.every((_, optionIndex) => orderForQuestion.includes(optionIndex))
           );
         });
 
@@ -1918,19 +2031,21 @@ export default function Home() {
   const selectedAnswers =
     currentAnswers[selectedLesson.id] || Array(quiz.length).fill(-1);
   const progress = Math.round((completed.length / lessons.length) * 100);
+  const masteredCount = lessons.filter((lesson) => {
+    const result = quizState[lesson.id];
+    const questionCount = buildQuiz(lesson.id).length;
+    return result?.submitted && questionCount > 0 && result.score / questionCount >= 0.8;
+  }).length;
   const selectedScreenshot = screenshots[selectedLesson.id];
-  const scorePercent = submittedResult
-    ? Math.round((submittedResult.score / quiz.length) * 100)
-    : 0;
+  const scorePercent =
+    submittedResult && quiz.length > 0
+      ? Math.round((submittedResult.score / quiz.length) * 100)
+      : 0;
 
   const groupedLessons = useMemo(
     () => ({
-      "Summer Term 1": lessons.filter(
-        (lesson) => lesson.term === "Summer Term 1"
-      ),
-      "Summer Term 2": lessons.filter(
-        (lesson) => lesson.term === "Summer Term 2"
-      ),
+      "Summer Term 1": lessons.filter((lesson) => lesson.term === "Summer Term 1"),
+      "Summer Term 2": lessons.filter((lesson) => lesson.term === "Summer Term 2"),
     }),
     []
   );
@@ -1959,7 +2074,8 @@ export default function Home() {
     };
 
     addProfileToRegistry(newProfile);
-    setRegistry(getRegistry());
+    const updatedRegistry = getRegistry();
+    setRegistry(updatedRegistry);
     setProfile(newProfile);
     setExistingClass(setupClass);
   };
@@ -1968,6 +2084,7 @@ export default function Home() {
     setProfile(selectedProfile);
     setSetupClass(selectedProfile.className);
     setSetupStudentName(selectedProfile.studentName);
+    setExistingClass(selectedProfile.className);
   };
 
   const switchLearner = () => {
@@ -1982,7 +2099,6 @@ export default function Home() {
     const confirmed = window.confirm(
       `Delete saved data for ${selectedProfile.studentName} in ${selectedProfile.className}? This will remove progress, quiz scores, and screenshots from this browser.`
     );
-
     if (!confirmed) return;
 
     localStorage.removeItem(`${selectedProfile.storageKey}-progress`);
@@ -2002,12 +2118,17 @@ export default function Home() {
 
   const markComplete = () => {
     if (!completed.includes(selectedLesson.id)) {
-      setCompleted((prev) => [...prev, selectedLesson.id]);
+      setCompleted((prev) => [...prev, selectedLesson.id].sort((a, b) => a - b));
     }
   };
 
   const resetCurrentLearnerProgress = () => {
     if (!profile) return;
+
+    const confirmed = window.confirm(
+      `Reset all saved progress for ${profile.studentName}? This will clear lesson completion, quiz data, quiz order, and screenshots for this browser.`
+    );
+    if (!confirmed) return;
 
     setCompleted([]);
     setQuizState({});
@@ -2039,8 +2160,7 @@ export default function Home() {
     let score = 0;
     quiz.forEach((question, index) => {
       const displayedIndex = selectedAnswers[index];
-      const originalIndex = question.originalOptionIndexes?.[displayedIndex] ?? displayedIndex;
-
+      const originalIndex = question.originalOptionIndexes[displayedIndex];
       if (originalIndex === question.answer) {
         score += 1;
       }
@@ -2054,6 +2174,10 @@ export default function Home() {
         answers: selectedAnswers,
       },
     }));
+
+    if (!completed.includes(selectedLesson.id)) {
+      setCompleted((prev) => [...prev, selectedLesson.id].sort((a, b) => a - b));
+    }
   };
 
   const handleScreenshotUpload = (event: ChangeEvent<HTMLInputElement>) => {
@@ -2099,7 +2223,7 @@ export default function Home() {
         style={{
           padding: 32,
           fontFamily: "Inter, Arial, sans-serif",
-          maxWidth: 1100,
+          maxWidth: 1120,
           margin: "0 auto",
           background: pastel.page,
           color: pastel.text,
@@ -2123,7 +2247,7 @@ export default function Home() {
             <div
               style={{
                 fontSize: 14,
-                color: "#7c3aed",
+                color: pastel.accent,
                 fontWeight: 700,
                 letterSpacing: 0.3,
               }}
@@ -2132,28 +2256,21 @@ export default function Home() {
             </div>
             <h1
               style={{
-                fontSize: 46,
+                fontSize: 48,
                 lineHeight: 1.05,
                 margin: "8px 0 10px",
                 color: pastel.title,
               }}
             >
-              Welcome to Year 5 Computing
+              APSR Year 6 Computing
             </h1>
-            <p style={{ fontSize: 20, margin: 0 }}>
-              Choose an existing pupil or create a new pupil learning space on
-              this browser.
+            <p style={{ fontSize: 20, margin: 0, maxWidth: 860 }}>
+              Variables in Scratch and sensing with Micro:bit. Choose an existing
+              pupil or create a new pupil learning space on this browser.
             </p>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              marginBottom: 22,
-              flexWrap: "wrap",
-            }}
-          >
+          <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
             <button
               onClick={() => setStartMode("existing")}
               style={{
@@ -2166,11 +2283,11 @@ export default function Home() {
                 background:
                   startMode === "existing"
                     ? "linear-gradient(135deg, #ede9fe 0%, #dbeafe 100%)"
-                    : "#ffffff",
-                fontWeight: 800,
-                fontSize: 16,
+                    : pastel.panel,
                 color: pastel.title,
+                fontWeight: 800,
                 cursor: "pointer",
+                fontSize: 16,
               }}
             >
               Choose Existing Pupil
@@ -2188,70 +2305,136 @@ export default function Home() {
                 background:
                   startMode === "new"
                     ? "linear-gradient(135deg, #ede9fe 0%, #dbeafe 100%)"
-                    : "#ffffff",
-                fontWeight: 800,
-                fontSize: 16,
+                    : pastel.panel,
                 color: pastel.title,
+                fontWeight: 800,
                 cursor: "pointer",
+                fontSize: 16,
               }}
             >
-              New Pupil
+              Create New Pupil
             </button>
           </div>
 
-          {startMode === "existing" ? (
+          {startMode === "new" ? (
             <div
               style={{
-                background: "rgba(255,255,255,0.78)",
+                background: "rgba(255,255,255,0.82)",
                 border: `1px solid ${pastel.border}`,
                 borderRadius: 24,
                 padding: 24,
+                display: "grid",
+                gap: 18,
               }}
             >
-              <h2
+              <div
                 style={{
-                  fontSize: 28,
-                  marginTop: 0,
-                  marginBottom: 14,
+                  fontSize: 20,
+                  fontWeight: 800,
                   color: pastel.title,
                 }}
               >
-                Choose Existing Pupil
-              </h2>
+                New Pupil
+              </div>
 
+              <div style={{ display: "grid", gap: 10 }}>
+                <label style={{ fontWeight: 700 }}>Class</label>
+                <select
+                  value={setupClass}
+                  onChange={(event) => setSetupClass(event.target.value)}
+                  style={{
+                    padding: "14px 16px",
+                    borderRadius: 14,
+                    border: `1px solid ${pastel.border}`,
+                    background: "#ffffff",
+                    fontSize: 16,
+                    color: pastel.title,
+                  }}
+                >
+                  {CLASS_OPTIONS.map((className) => (
+                    <option key={className} value={className}>
+                      {className}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                <label style={{ fontWeight: 700 }}>Student Name</label>
+                <input
+                  value={setupStudentName}
+                  onChange={(event) => setSetupStudentName(event.target.value)}
+                  placeholder="Enter pupil name"
+                  style={{
+                    padding: "14px 16px",
+                    borderRadius: 14,
+                    border: `1px solid ${pastel.border}`,
+                    background: "#ffffff",
+                    fontSize: 16,
+                    color: pastel.title,
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <button
+                  onClick={startNewSession}
+                  style={{
+                    padding: "14px 18px",
+                    borderRadius: 16,
+                    border: "none",
+                    background: "linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)",
+                    color: "#ffffff",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    fontSize: 16,
+                  }}
+                >
+                  Start Learning Space
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                background: "rgba(255,255,255,0.82)",
+                border: `1px solid ${pastel.border}`,
+                borderRadius: 24,
+                padding: 24,
+                display: "grid",
+                gap: 18,
+              }}
+            >
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, minmax(180px, 1fr))",
-                  gap: 14,
-                  marginBottom: 24,
+                  fontSize: 20,
+                  fontWeight: 800,
+                  color: pastel.title,
                 }}
               >
-                {CLASS_OPTIONS.map((classOption) => {
-                  const isActive = existingClass === classOption;
-                  return (
-                    <button
-                      key={classOption}
-                      onClick={() => setExistingClass(classOption)}
-                      style={{
-                        padding: "18px 16px",
-                        borderRadius: 18,
-                        border: isActive
-                          ? "1px solid #c4b5fd"
-                          : `1px solid ${pastel.border}`,
-                        background: isActive
-                          ? "linear-gradient(135deg, #ede9fe 0%, #dbeafe 100%)"
-                          : "#ffffff",
-                        fontWeight: 800,
-                        fontSize: 18,
-                        color: pastel.title,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {classOption}
-                    </button>
-                  );
-                })}
+                Existing Pupils
+              </div>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                <label style={{ fontWeight: 700 }}>Filter by Class</label>
+                <select
+                  value={existingClass}
+                  onChange={(event) => setExistingClass(event.target.value)}
+                  style={{
+                    padding: "14px 16px",
+                    borderRadius: 14,
+                    border: `1px solid ${pastel.border}`,
+                    background: "#ffffff",
+                    fontSize: 16,
+                    color: pastel.title,
+                  }}
+                >
+                  {CLASS_OPTIONS.map((className) => (
+                    <option key={className} value={className}>
+                      {className}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {existingPupilsForClass.length === 0 ? (
@@ -2259,24 +2442,23 @@ export default function Home() {
                   style={{
                     border: `1px dashed ${pastel.border}`,
                     borderRadius: 18,
-                    padding: 22,
-                    background: "#ffffff",
-                    fontSize: 17,
+                    padding: 20,
+                    background: pastel.panelSoft,
                     color: "#64748b",
                   }}
                 >
-                  No saved pupils yet for {existingClass}.
+                  No saved pupils found for {existingClass} on this browser yet.
                 </div>
               ) : (
                 <div style={{ display: "grid", gap: 12 }}>
-                  {existingPupilsForClass.map((savedPupil) => (
+                  {existingPupilsForClass.map((item) => (
                     <div
-                      key={savedPupil.storageKey}
+                      key={item.storageKey}
                       style={{
-                        background: "#ffffff",
                         border: `1px solid ${pastel.border}`,
                         borderRadius: 18,
                         padding: 16,
+                        background: "#ffffff",
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
@@ -2285,30 +2467,21 @@ export default function Home() {
                       }}
                     >
                       <div>
-                        <div
-                          style={{
-                            fontWeight: 800,
-                            fontSize: 18,
-                            color: pastel.title,
-                          }}
-                        >
-                          {savedPupil.studentName}
+                        <div style={{ fontWeight: 800, color: pastel.title, fontSize: 18 }}>
+                          {item.studentName}
                         </div>
-                        <div style={{ fontSize: 14, color: "#64748b" }}>
-                          {savedPupil.className}
-                        </div>
+                        <div style={{ color: "#64748b", fontSize: 14 }}>{item.className}</div>
                       </div>
 
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                         <button
-                          onClick={() => openExistingPupil(savedPupil)}
+                          onClick={() => openExistingPupil(item)}
                           style={{
-                            padding: "12px 16px",
-                            borderRadius: 14,
+                            padding: "10px 14px",
+                            borderRadius: 999,
                             border: "none",
-                            background:
-                              "linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)",
-                            color: "white",
+                            background: "linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)",
+                            color: "#ffffff",
                             fontWeight: 800,
                             cursor: "pointer",
                           }}
@@ -2317,13 +2490,13 @@ export default function Home() {
                         </button>
 
                         <button
-                          onClick={() => deleteExistingPupil(savedPupil)}
+                          onClick={() => deleteExistingPupil(item)}
                           style={{
-                            padding: "12px 16px",
-                            borderRadius: 14,
+                            padding: "10px 14px",
+                            borderRadius: 999,
                             border: "1px solid #fecdd3",
-                            background: pastel.roseSoft,
-                            color: pastel.rose,
+                            background: "#fff1f2",
+                            color: "#be123c",
                             fontWeight: 800,
                             cursor: "pointer",
                           }}
@@ -2335,140 +2508,6 @@ export default function Home() {
                   ))}
                 </div>
               )}
-
-              <p
-                style={{
-                  marginTop: 18,
-                  marginBottom: 0,
-                  fontSize: 14,
-                  color: "#64748b",
-                  lineHeight: 1.6,
-                }}
-              >
-                Saved pupils are stored only on this browser and device.
-              </p>
-            </div>
-          ) : (
-            <div
-              style={{
-                background: "rgba(255,255,255,0.78)",
-                border: `1px solid ${pastel.border}`,
-                borderRadius: 24,
-                padding: 24,
-              }}
-            >
-              <h2
-                style={{
-                  fontSize: 28,
-                  marginTop: 0,
-                  marginBottom: 14,
-                  color: pastel.title,
-                }}
-              >
-                Create New Pupil
-              </h2>
-
-              <h3
-                style={{
-                  fontSize: 22,
-                  marginTop: 0,
-                  marginBottom: 12,
-                  color: pastel.title,
-                }}
-              >
-                Step 1: Choose class
-              </h3>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, minmax(180px, 1fr))",
-                  gap: 14,
-                  marginBottom: 24,
-                }}
-              >
-                {CLASS_OPTIONS.map((classOption) => {
-                  const isActive = setupClass === classOption;
-                  return (
-                    <button
-                      key={classOption}
-                      onClick={() => setSetupClass(classOption)}
-                      style={{
-                        padding: "18px 16px",
-                        borderRadius: 18,
-                        border: isActive
-                          ? "1px solid #c4b5fd"
-                          : `1px solid ${pastel.border}`,
-                        background: isActive
-                          ? "linear-gradient(135deg, #ede9fe 0%, #dbeafe 100%)"
-                          : "#ffffff",
-                        fontWeight: 800,
-                        fontSize: 18,
-                        color: pastel.title,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {classOption}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <h3
-                style={{
-                  fontSize: 22,
-                  marginTop: 0,
-                  marginBottom: 12,
-                  color: pastel.title,
-                }}
-              >
-                Step 2: Enter name
-              </h3>
-
-              <input
-                type="text"
-                value={setupStudentName}
-                onChange={(e) => setSetupStudentName(e.target.value)}
-                placeholder="Type first name and surname"
-                style={{
-                  width: "100%",
-                  padding: "16px 18px",
-                  borderRadius: 16,
-                  border: `1px solid ${pastel.border}`,
-                  fontSize: 18,
-                  marginBottom: 20,
-                  outline: "none",
-                }}
-              />
-
-              <button
-                onClick={startNewSession}
-                style={{
-                  padding: "16px 22px",
-                  borderRadius: 16,
-                  border: "none",
-                  background: "linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)",
-                  color: "white",
-                  fontWeight: 800,
-                  fontSize: 18,
-                  cursor: "pointer",
-                }}
-              >
-                Create Pupil Space
-              </button>
-
-              <p
-                style={{
-                  marginTop: 18,
-                  marginBottom: 0,
-                  fontSize: 14,
-                  color: "#64748b",
-                  lineHeight: 1.6,
-                }}
-              >
-                Progress, quiz scores, and screenshots will be saved separately
-                for this pupil on this browser.
-              </p>
             </div>
           )}
         </div>
@@ -2481,7 +2520,7 @@ export default function Home() {
       style={{
         padding: 32,
         fontFamily: "Inter, Arial, sans-serif",
-        maxWidth: 1520,
+        maxWidth: 1500,
         margin: "0 auto",
         background: pastel.page,
         color: pastel.text,
@@ -2503,7 +2542,7 @@ export default function Home() {
           style={{
             display: "flex",
             justifyContent: "space-between",
-            gap: 24,
+            gap: 20,
             alignItems: "center",
             flexWrap: "wrap",
           }}
@@ -2512,7 +2551,7 @@ export default function Home() {
             <div
               style={{
                 fontSize: 14,
-                color: "#7c3aed",
+                color: pastel.accent,
                 fontWeight: 700,
                 letterSpacing: 0.3,
                 marginBottom: 8,
@@ -2520,19 +2559,22 @@ export default function Home() {
             >
               APSR Computing Platform
             </div>
+
             <h1
               style={{
-                fontSize: 52,
+                fontSize: 50,
                 lineHeight: 1.05,
                 margin: "0 0 10px",
                 color: pastel.title,
               }}
             >
-              APSR Year 5 Computing
+              APSR Year 6 Computing
             </h1>
-            <p style={{ fontSize: 22, margin: "0 0 10px" }}>
-              Selection in Scratch
+
+            <p style={{ fontSize: 22, margin: "0 0 12px" }}>
+              Variables in Scratch • Sensing with Micro:bit
             </p>
+
             <div
               style={{
                 display: "flex",
@@ -2554,6 +2596,7 @@ export default function Home() {
               >
                 {profile.className}
               </span>
+
               <span
                 style={{
                   background: "rgba(255,255,255,0.8)",
@@ -2567,6 +2610,7 @@ export default function Home() {
               >
                 {profile.studentName}
               </span>
+
               <button
                 onClick={switchLearner}
                 style={{
@@ -2581,6 +2625,7 @@ export default function Home() {
               >
                 Switch Pupil
               </button>
+
               <a
                 href="/teacher"
                 style={{
@@ -2601,24 +2646,26 @@ export default function Home() {
 
           <div
             style={{
-              minWidth: 320,
-              background: "rgba(255,255,255,0.7)",
+              minWidth: 340,
+              background: "rgba(255,255,255,0.78)",
               border: `1px solid ${pastel.border}`,
               borderRadius: 22,
               padding: 18,
+              display: "grid",
+              gap: 12,
             }}
           >
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                fontWeight: 700,
-                marginBottom: 10,
+                fontWeight: 800,
               }}
             >
               <span>Course Progress</span>
               <span>{progress}%</span>
             </div>
+
             <div
               style={{
                 height: 14,
@@ -2631,13 +2678,43 @@ export default function Home() {
                 style={{
                   width: `${progress}%`,
                   height: "100%",
-                  background:
-                    "linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)",
+                  background: "linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)",
                 }}
               />
             </div>
-            <div style={{ fontSize: 14, marginTop: 10, color: "#64748b" }}>
+
+            <div style={{ fontSize: 14, color: "#64748b" }}>
               {completed.length} of {lessons.length} lessons marked complete
+            </div>
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <span
+                style={{
+                  background: "#dcfce7",
+                  border: "1px solid #86efac",
+                  borderRadius: 999,
+                  padding: "8px 12px",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#166534",
+                }}
+              >
+                Mastered: {masteredCount}
+              </span>
+
+              <span
+                style={{
+                  background: "#dbeafe",
+                  border: "1px solid #93c5fd",
+                  borderRadius: 999,
+                  padding: "8px 12px",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#1d4ed8",
+                }}
+              >
+                Platform: {selectedLesson.platform}
+              </span>
             </div>
           </div>
         </div>
@@ -2674,6 +2751,7 @@ export default function Home() {
             <h2 style={{ fontSize: 34, margin: 0, color: pastel.title }}>
               Lessons
             </h2>
+
             <button
               onClick={resetCurrentLearnerProgress}
               style={{
@@ -2690,122 +2768,91 @@ export default function Home() {
             </button>
           </div>
 
-          {(["Summer Term 1", "Summer Term 2"] as const).map((term) => (
+          {(["Summer Term 1", "Summer Term 2"] as TermName[]).map((term) => (
             <div key={term} style={{ marginBottom: 22 }}>
               <div
                 style={{
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: 800,
-                  color: "#7c3aed",
-                  marginBottom: 10,
+                  color: pastel.accent,
                   textTransform: "uppercase",
-                  letterSpacing: 0.6,
+                  letterSpacing: 0.5,
+                  marginBottom: 10,
                 }}
               >
                 {term}
               </div>
 
-              {groupedLessons[term].map((lesson) => {
-                const active = selectedLessonId === lesson.id;
-                const done = completed.includes(lesson.id);
-                const hasScreenshot = Boolean(screenshots[lesson.id]);
-                const hasQuizScore = Boolean(quizState[lesson.id]?.submitted);
+              <div style={{ display: "grid", gap: 10 }}>
+                {groupedLessons[term].map((lesson) => {
+                  const lessonQuizCount = buildQuiz(lesson.id).length;
+                  const stateLabel = getLessonStateLabel(
+                    lesson.id,
+                    completed,
+                    quizState,
+                    lessonQuizCount
+                  );
+                  const isSelected = lesson.id === selectedLessonId;
 
-                return (
-                  <button
-                    key={lesson.id}
-                    onClick={() => setSelectedLessonId(lesson.id)}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: 16,
-                      marginBottom: 10,
-                      borderRadius: 18,
-                      border: active
-                        ? "1px solid #c4b5fd"
-                        : `1px solid ${pastel.border}`,
-                      background: active
-                        ? "linear-gradient(135deg, #ede9fe 0%, #dbeafe 100%)"
-                        : pastel.panel,
-                      cursor: "pointer",
-                      boxShadow: active
-                        ? "0 8px 22px rgba(124, 58, 237, 0.12)"
-                        : "none",
-                    }}
-                  >
-                    <div
+                  return (
+                    <button
+                      key={lesson.id}
+                      onClick={() => setSelectedLessonId(lesson.id)}
                       style={{
-                        fontSize: 12,
-                        color: "#64748b",
-                        marginBottom: 6,
+                        width: "100%",
+                        textAlign: "left",
+                        padding: 14,
+                        borderRadius: 18,
+                        border: isSelected
+                          ? "1px solid #c4b5fd"
+                          : `1px solid ${pastel.border}`,
+                        background: isSelected
+                          ? "linear-gradient(135deg, #ede9fe 0%, #dbeafe 100%)"
+                          : "#ffffff",
+                        cursor: "pointer",
                       }}
                     >
-                      Week {lesson.week} • {lesson.shortTitle}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 16,
-                        fontWeight: 800,
-                        color: pastel.title,
-                      }}
-                    >
-                      {lesson.title}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 14,
-                        marginTop: 6,
-                        color: pastel.text,
-                      }}
-                    >
-                      {lesson.description}
-                    </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          alignItems: "start",
+                          marginBottom: 8,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 800, color: pastel.title }}>
+                            {lesson.id}. {lesson.shortTitle}
+                          </div>
+                          <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>
+                            Week {lesson.week} • {lesson.platform}
+                          </div>
+                        </div>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        flexWrap: "wrap",
-                        marginTop: 10,
-                      }}
-                    >
-                      {done && (
                         <span
                           style={{
-                            color: pastel.green,
+                            background: stateLabel.bg,
+                            border: `1px solid ${stateLabel.border}`,
+                            color: stateLabel.text,
+                            borderRadius: 999,
+                            padding: "5px 10px",
+                            fontSize: 12,
                             fontWeight: 800,
-                            fontSize: 13,
+                            whiteSpace: "nowrap",
                           }}
                         >
-                          ✓ Completed
+                          {stateLabel.label}
                         </span>
-                      )}
-                      {hasQuizScore && (
-                        <span
-                          style={{
-                            color: "#1d4ed8",
-                            fontWeight: 800,
-                            fontSize: 13,
-                          }}
-                        >
-                          Quiz: {quizState[lesson.id].score}/10
-                        </span>
-                      )}
-                      {hasScreenshot && (
-                        <span
-                          style={{
-                            color: "#b45309",
-                            fontWeight: 800,
-                            fontSize: 13,
-                          }}
-                        >
-                          📷 Screenshot added
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
+                      </div>
+
+                      <div style={{ fontSize: 14, color: "#475569", lineHeight: 1.45 }}>
+                        {lesson.title}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           ))}
         </aside>
@@ -2816,163 +2863,194 @@ export default function Home() {
               background: pastel.panel,
               border: `1px solid ${pastel.border}`,
               borderRadius: 24,
-              padding: 28,
+              padding: 24,
               boxShadow: pastel.shadow,
             }}
           >
-            <div
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+              <span
+                style={{
+                  background: pastel.panelBlue,
+                  border: `1px solid ${pastel.border}`,
+                  borderRadius: 999,
+                  padding: "8px 12px",
+                  fontWeight: 800,
+                  color: pastel.title,
+                }}
+              >
+                Lesson {selectedLesson.id}
+              </span>
+
+              <span
+                style={{
+                  background: selectedLesson.platform === "Scratch" ? pastel.panelPeach : pastel.panelMint,
+                  border: `1px solid ${pastel.border}`,
+                  borderRadius: 999,
+                  padding: "8px 12px",
+                  fontWeight: 800,
+                  color: pastel.title,
+                }}
+              >
+                {selectedLesson.platform}
+              </span>
+
+              <span
+                style={{
+                  background: pastel.panelSoft,
+                  border: `1px solid ${pastel.border}`,
+                  borderRadius: 999,
+                  padding: "8px 12px",
+                  fontWeight: 800,
+                  color: pastel.title,
+                }}
+              >
+                {selectedLesson.term}
+              </span>
+            </div>
+
+            <h2
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 18,
-                alignItems: "start",
-                flexWrap: "wrap",
+                fontSize: 38,
+                lineHeight: 1.1,
+                margin: "0 0 8px",
+                color: pastel.title,
               }}
             >
-              <div>
-                <div
-                  style={{
-                    display: "inline-block",
-                    padding: "8px 12px",
-                    borderRadius: 999,
-                    background: pastel.panelLilac,
-                    color: "#6d28d9",
-                    fontWeight: 800,
-                    fontSize: 13,
-                    marginBottom: 12,
-                  }}
-                >
-                  {selectedLesson.term} • Week {selectedLesson.week}
+              {selectedLesson.title}
+            </h2>
+
+            <p style={{ fontSize: 19, margin: "0 0 16px", color: "#475569" }}>
+              {selectedLesson.description}
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                gap: 14,
+              }}
+            >
+              <div
+                style={{
+                  background: pastel.panelBlue,
+                  border: `1px solid ${pastel.border}`,
+                  borderRadius: 18,
+                  padding: 16,
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 800, color: pastel.accent, marginBottom: 8 }}>
+                  OBJECTIVE
                 </div>
-                <h2
-                  style={{
-                    fontSize: 48,
-                    lineHeight: 1.05,
-                    margin: "0 0 10px",
-                    color: pastel.title,
-                  }}
-                >
-                  {selectedLesson.title}
-                </h2>
-                <p style={{ fontSize: 22, margin: 0 }}>
-                  {selectedLesson.description}
-                </p>
+                <div style={{ color: pastel.title, fontWeight: 700, lineHeight: 1.5 }}>
+                  {selectedLesson.objective}
+                </div>
               </div>
 
-              {submittedResult?.submitted && (
-                <div
-                  style={{
-                    background: pastel.greenSoft,
-                    color: "#065f46",
-                    borderRadius: 18,
-                    padding: 18,
-                    minWidth: 220,
-                    border: "1px solid #a7f3d0",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontWeight: 800,
-                      fontSize: 14,
-                      marginBottom: 6,
-                    }}
-                  >
-                    Quiz Submitted
-                  </div>
-                  <div style={{ fontSize: 28, fontWeight: 900 }}>
-                    {submittedResult.score}/10
-                  </div>
-                  <div style={{ fontSize: 14 }}>
-                    {scorePercent}% • No retakes for this lesson
-                  </div>
+              <div
+                style={{
+                  background: pastel.panelMint,
+                  border: `1px solid ${pastel.border}`,
+                  borderRadius: 18,
+                  padding: 16,
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 800, color: pastel.accent, marginBottom: 8 }}>
+                  OVERVIEW
                 </div>
-              )}
+                <div style={{ color: pastel.title, lineHeight: 1.6 }}>
+                  {selectedLesson.overview}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  background: pastel.panelPeach,
+                  border: `1px solid ${pastel.border}`,
+                  borderRadius: 18,
+                  padding: 16,
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 800, color: pastel.accent, marginBottom: 8 }}>
+                  WHY IT MATTERS
+                </div>
+                <div style={{ color: pastel.title, lineHeight: 1.6 }}>
+                  {selectedLesson.whyItMatters}
+                </div>
+              </div>
             </div>
           </div>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
               gap: 24,
             }}
           >
             <div
               style={{
-                background: pastel.panelBlue,
+                background: pastel.panel,
                 border: `1px solid ${pastel.border}`,
                 borderRadius: 24,
-                padding: 26,
+                padding: 22,
                 boxShadow: pastel.shadow,
               }}
             >
-              <h3
+              <div
                 style={{
-                  fontSize: 32,
-                  marginTop: 0,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: pastel.accent,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
                   marginBottom: 12,
-                  color: pastel.title,
                 }}
               >
-                Learn This First
-              </h3>
-              <div style={{ fontSize: 18, lineHeight: 1.7 }}>
-                <p>
-                  <strong>What is this topic?</strong>
-                  <br />
-                  {selectedLesson.overview}
-                </p>
-                <p>
-                  <strong>Why does it matter?</strong>
-                  <br />
-                  {selectedLesson.whyItMatters}
-                </p>
-                <p>
-                  <strong>Key question</strong>
-                  <br />
-                  {selectedLesson.keyQuestion}
-                </p>
-                <p>
-                  <strong>Watch out for this</strong>
-                  <br />
-                  {selectedLesson.misconception}
-                </p>
+                Retrieval Starter
+              </div>
+              <div style={{ fontSize: 18, color: pastel.title, lineHeight: 1.6, fontWeight: 700 }}>
+                {selectedLesson.retrievalQuestion}
               </div>
             </div>
 
             <div
               style={{
-                background: pastel.panelMint,
+                background: pastel.panel,
                 border: `1px solid ${pastel.border}`,
                 borderRadius: 24,
-                padding: 26,
+                padding: 22,
                 boxShadow: pastel.shadow,
               }}
             >
-              <h3
+              <div
                 style={{
-                  fontSize: 32,
-                  marginTop: 0,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: pastel.accent,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
                   marginBottom: 12,
-                  color: pastel.title,
                 }}
               >
-                Step-by-Step in Scratch
-              </h3>
-              <ol
-                style={{
-                  paddingLeft: 24,
-                  margin: 0,
-                  fontSize: 18,
-                  lineHeight: 1.75,
-                }}
-              >
-                {selectedLesson.scratchSteps.map((step, index) => (
-                  <li key={index} style={{ marginBottom: 10 }}>
-                    {step}
-                  </li>
+                Vocabulary
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {selectedLesson.vocab.map((word) => (
+                  <span
+                    key={word}
+                    style={{
+                      background: pastel.accentSoft,
+                      border: "1px solid #c4b5fd",
+                      borderRadius: 999,
+                      padding: "8px 12px",
+                      fontWeight: 700,
+                      color: "#5b21b6",
+                    }}
+                  >
+                    {word}
+                  </span>
                 ))}
-              </ol>
+              </div>
             </div>
           </div>
 
@@ -2981,317 +3059,317 @@ export default function Home() {
               background: pastel.panel,
               border: `1px solid ${pastel.border}`,
               borderRadius: 24,
-              padding: 28,
+              padding: 24,
               boxShadow: pastel.shadow,
             }}
           >
             <div
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 18,
-                flexWrap: "wrap",
+                fontSize: 13,
+                fontWeight: 800,
+                color: pastel.accent,
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                marginBottom: 12,
               }}
             >
-              <div>
-                <h3
-                  style={{
-                    fontSize: 34,
-                    marginTop: 0,
-                    marginBottom: 8,
-                    color: pastel.title,
-                  }}
-                >
-                  Lesson Quiz
-                </h3>
-                <p style={{ fontSize: 18, margin: 0 }}>
-                  10 questions based on this lesson. Once submitted, the quiz is
-                  locked and cannot be retaken.
-                </p>
-              </div>
-
-              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                <span
-                  style={{
-                    background: pastel.accentSoft,
-                    color: pastel.accent,
-                    borderRadius: 999,
-                    padding: "10px 14px",
-                    fontWeight: 800,
-                  }}
-                >
-                  10 Questions
-                </span>
-                {submittedResult?.submitted && (
-                  <span
-                    style={{
-                      background: pastel.greenSoft,
-                      color: "#065f46",
-                      borderRadius: 999,
-                      padding: "10px 14px",
-                      fontWeight: 800,
-                    }}
-                  >
-                    Submitted
-                  </span>
-                )}
-              </div>
+              Guided Explanation
             </div>
 
-            <div style={{ display: "grid", gap: 18, marginTop: 22 }}>
-              {quiz.map((question, qIndex) => (
+            <div style={{ display: "grid", gap: 12 }}>
+              {selectedLesson.teachingPoints.map((point, index) => (
                 <div
-                  key={qIndex}
+                  key={`${selectedLesson.id}-teaching-${index}`}
                   style={{
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "start",
+                    background: index % 2 === 0 ? pastel.panelSky : pastel.slateSoft,
                     border: `1px solid ${pastel.border}`,
-                    borderRadius: 18,
-                    padding: 20,
-                    background: qIndex % 2 === 0 ? "#fff" : "#fcfcff",
+                    borderRadius: 16,
+                    padding: 14,
                   }}
                 >
                   <div
                     style={{
+                      minWidth: 34,
+                      height: 34,
+                      borderRadius: 999,
+                      display: "grid",
+                      placeItems: "center",
                       fontWeight: 800,
-                      fontSize: 19,
-                      marginBottom: 14,
-                      color: pastel.title,
+                      color: pastel.accent,
+                      background: "#ffffff",
+                      border: `1px solid ${pastel.border}`,
                     }}
                   >
-                    {qIndex + 1}. {question.prompt}
+                    {index + 1}
                   </div>
-
-                  <div style={{ display: "grid", gap: 10 }}>
-                    {question.options.map((option, oIndex) => {
-                      const chosen = selectedAnswers[qIndex] === oIndex;
-                      const locked = submittedResult?.submitted;
-                      const originalOptionIndex =
-                        question.originalOptionIndexes?.[oIndex] ?? oIndex;
-                      const isCorrect =
-                        submittedResult?.submitted &&
-                        originalOptionIndex === question.answer;
-                      const isWrongChoice =
-                        submittedResult?.submitted &&
-                        chosen &&
-                        originalOptionIndex !== question.answer;
-
-                      return (
-                        <button
-                          key={oIndex}
-                          onClick={() => chooseAnswer(qIndex, oIndex)}
-                          disabled={locked}
-                          style={{
-                            textAlign: "left",
-                            padding: "14px 16px",
-                            borderRadius: 14,
-                            border: isCorrect
-                              ? "1px solid #86efac"
-                              : isWrongChoice
-                              ? "1px solid #fca5a5"
-                              : chosen
-                              ? "1px solid #c4b5fd"
-                              : `1px solid ${pastel.border}`,
-                            background: isCorrect
-                              ? "#ecfdf5"
-                              : isWrongChoice
-                              ? "#fef2f2"
-                              : chosen
-                              ? "#f5f3ff"
-                              : "#ffffff",
-                            cursor: locked ? "default" : "pointer",
-                            fontSize: 17,
-                          }}
-                        >
-                          <div style={{ fontWeight: 600 }}>{option}</div>
-                          {submittedResult?.submitted && isCorrect && (
-                            <div
-                              style={{
-                                fontSize: 13,
-                                marginTop: 6,
-                                color: "#15803d",
-                                fontWeight: 700,
-                              }}
-                            >
-                              Correct answer
-                            </div>
-                          )}
-                          {submittedResult?.submitted && isWrongChoice && (
-                            <div
-                              style={{
-                                fontSize: 13,
-                                marginTop: 6,
-                                color: "#dc2626",
-                                fontWeight: 700,
-                              }}
-                            >
-                              Your answer
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <div style={{ lineHeight: 1.6, color: pastel.title }}>{point}</div>
                 </div>
               ))}
             </div>
-
-            <div
-              style={{
-                marginTop: 22,
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 16,
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
-              <div style={{ fontSize: 16, color: "#64748b" }}>
-                {submittedResult?.submitted
-                  ? `Final score: ${submittedResult.score}/10. Review the green correct answers and any red mistakes to see where to improve.`
-                  : "Choose one answer for each question, then submit once."}
-              </div>
-
-              <button
-                onClick={submitQuiz}
-                disabled={submittedResult?.submitted}
-                style={{
-                  padding: "14px 20px",
-                  borderRadius: 14,
-                  border: "none",
-                  background: submittedResult?.submitted
-                    ? "#cbd5e1"
-                    : "linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)",
-                  color: "white",
-                  fontWeight: 800,
-                  cursor: submittedResult?.submitted ? "default" : "pointer",
-                  fontSize: 17,
-                }}
-              >
-                {submittedResult?.submitted ? "Quiz Submitted" : "Submit Quiz"}
-              </button>
-            </div>
-
-            {submittedResult?.submitted && (
-              <div
-                style={{
-                  marginTop: 20,
-                  background: pastel.panelSky,
-                  border: `1px solid ${pastel.border}`,
-                  borderRadius: 18,
-                  padding: 18,
-                }}
-              >
-                <div
-                  style={{
-                    fontWeight: 900,
-                    fontSize: 22,
-                    color: pastel.title,
-                    marginBottom: 8,
-                  }}
-                >
-                  Quiz Result
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 14,
-                    flexWrap: "wrap",
-                    marginBottom: 8,
-                  }}
-                >
-                  <span
-                    style={{
-                      background: "#ffffff",
-                      border: `1px solid ${pastel.border}`,
-                      borderRadius: 999,
-                      padding: "10px 14px",
-                      fontWeight: 800,
-                      color: pastel.title,
-                    }}
-                  >
-                    Score: {submittedResult.score}/10
-                  </span>
-                  <span
-                    style={{
-                      background: "#ffffff",
-                      border: `1px solid ${pastel.border}`,
-                      borderRadius: 999,
-                      padding: "10px 14px",
-                      fontWeight: 800,
-                      color: pastel.title,
-                    }}
-                  >
-                    Percentage: {scorePercent}%
-                  </span>
-                </div>
-                <div style={{ fontSize: 16, color: "#475569", lineHeight: 1.6 }}>
-                  Look back through the quiz. Green answers show the correct
-                  responses. Red answers show any choices that need improving.
-                </div>
-              </div>
-            )}
           </div>
 
           <div
             style={{
-              background: pastel.panelSoft,
+              background: pastel.panel,
               border: `1px solid ${pastel.border}`,
               borderRadius: 24,
-              padding: 28,
+              padding: 24,
               boxShadow: pastel.shadow,
             }}
           >
-            <h3
-              style={{
-                fontSize: 34,
-                marginTop: 0,
-                marginBottom: 12,
-                color: pastel.title,
-              }}
-            >
-              Scratch Task
-            </h3>
-            <p style={{ fontSize: 20, lineHeight: 1.7, marginTop: 0 }}>
-              {selectedLesson.scratchTask}
-            </p>
-
             <div
               style={{
-                display: "flex",
-                gap: 14,
-                flexWrap: "wrap",
-                marginTop: 18,
+                fontSize: 13,
+                fontWeight: 800,
+                color: pastel.accent,
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                marginBottom: 12,
               }}
             >
+              Step-by-Step Guide
+            </div>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              {selectedLesson.guidedSteps.map((step, index) => (
+                <div
+                  key={`${selectedLesson.id}-step-${index}`}
+                  style={{
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "start",
+                    border: `1px solid ${pastel.border}`,
+                    borderRadius: 16,
+                    padding: 14,
+                    background: "#ffffff",
+                  }}
+                >
+                  <div
+                    style={{
+                      minWidth: 34,
+                      height: 34,
+                      borderRadius: 999,
+                      display: "grid",
+                      placeItems: "center",
+                      fontWeight: 800,
+                      color: "#ffffff",
+                      background: "linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)",
+                    }}
+                  >
+                    {index + 1}
+                  </div>
+                  <div style={{ lineHeight: 1.6 }}>{step}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 18 }}>
               <a
-                href={selectedLesson.scratchLink}
+                href={selectedLesson.projectLink}
                 target="_blank"
                 rel="noreferrer"
                 style={{
                   display: "inline-block",
-                  padding: "14px 20px",
-                  background: pastel.navy,
-                  color: "white",
-                  borderRadius: 14,
-                  textDecoration: "none",
+                  borderRadius: 999,
+                  padding: "12px 16px",
+                  background: pastel.panelLilac,
+                  border: `1px solid ${pastel.border}`,
+                  color: pastel.title,
                   fontWeight: 800,
-                  fontSize: 17,
+                  textDecoration: "none",
                 }}
               >
-                Open Scratch in a new tab
+                Open {selectedLesson.platform}
               </a>
+            </div>
+          </div>
 
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: 24,
+            }}
+          >
+            <div
+              style={{
+                background: pastel.panel,
+                border: `1px solid ${pastel.border}`,
+                borderRadius: 24,
+                padding: 24,
+                boxShadow: pastel.shadow,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: pastel.accent,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  marginBottom: 12,
+                }}
+              >
+                Practice Task
+              </div>
+              <div style={{ fontSize: 18, color: pastel.title, lineHeight: 1.6 }}>
+                {selectedLesson.practiceTask}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#fff7ed",
+                border: "1px solid #fdba74",
+                borderRadius: 24,
+                padding: 24,
+                boxShadow: pastel.shadow,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#c2410c",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  marginBottom: 12,
+                }}
+              >
+                Challenge Mode
+              </div>
+              <div style={{ fontSize: 18, color: pastel.title, lineHeight: 1.6 }}>
+                {selectedLesson.challengeTask}
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gap: 18,
+            }}
+          >
+            <div
+              style={{
+                background: pastel.panelBlue,
+                border: `1px solid ${pastel.border}`,
+                borderRadius: 22,
+                padding: 18,
+                boxShadow: pastel.shadow,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: pastel.accent,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  marginBottom: 10,
+                }}
+              >
+                Key Question
+              </div>
+              <div style={{ lineHeight: 1.6, color: pastel.title, fontWeight: 700 }}>
+                {selectedLesson.keyQuestion}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: pastel.roseSoft,
+                border: "1px solid #fecdd3",
+                borderRadius: 22,
+                padding: 18,
+                boxShadow: pastel.shadow,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#be123c",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  marginBottom: 10,
+                }}
+              >
+                Common Misconception
+              </div>
+              <div style={{ lineHeight: 1.6, color: pastel.title }}>
+                {selectedLesson.misconception}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: pastel.greenSoft,
+                border: "1px solid #86efac",
+                borderRadius: 22,
+                padding: 18,
+                boxShadow: pastel.shadow,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#166534",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  marginBottom: 10,
+                }}
+              >
+                Success Looks Like
+              </div>
+              <div style={{ lineHeight: 1.6, color: pastel.title }}>
+                {selectedLesson.correctOutcome}
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: pastel.panel,
+              border: `1px solid ${pastel.border}`,
+              borderRadius: 24,
+              padding: 24,
+              boxShadow: pastel.shadow,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 800,
+                color: pastel.accent,
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                marginBottom: 12,
+              }}
+            >
+              Watch Out For This
+            </div>
+            <div style={{ fontSize: 18, lineHeight: 1.6, color: pastel.title }}>
+              {selectedLesson.wrongOutcome}
+            </div>
+
+            <div style={{ marginTop: 18 }}>
               <button
                 onClick={markComplete}
                 style={{
-                  padding: "14px 20px",
-                  background: pastel.green,
-                  color: "white",
-                  borderRadius: 14,
                   border: "none",
-                  cursor: "pointer",
+                  background: "linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)",
+                  color: "#ffffff",
+                  borderRadius: 16,
+                  padding: "14px 18px",
                   fontWeight: 800,
-                  fontSize: 17,
+                  cursor: "pointer",
+                  fontSize: 16,
                 }}
               >
                 Mark Lesson Complete
@@ -3301,10 +3379,10 @@ export default function Home() {
 
           <div
             style={{
-              background: pastel.panelPeach,
+              background: pastel.panel,
               border: `1px solid ${pastel.border}`,
               borderRadius: 24,
-              padding: 28,
+              padding: 24,
               boxShadow: pastel.shadow,
             }}
           >
@@ -3312,128 +3390,92 @@ export default function Home() {
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                gap: 16,
+                gap: 12,
                 alignItems: "center",
                 flexWrap: "wrap",
-                marginBottom: 14,
+                marginBottom: 16,
               }}
             >
               <div>
-                <h3
+                <div
                   style={{
-                    fontSize: 32,
-                    marginTop: 0,
+                    fontSize: 13,
+                    fontWeight: 800,
+                    color: pastel.accent,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
                     marginBottom: 8,
-                    color: pastel.title,
                   }}
                 >
-                  Project Screenshot Upload
-                </h3>
-                <p style={{ fontSize: 18, lineHeight: 1.6, margin: 0 }}>
-                  Upload a screenshot of your Scratch work for this lesson.
-                  This stays on this browser only.
-                </p>
+                  Screenshot Upload
+                </div>
+                <div style={{ color: "#475569" }}>
+                  Upload a screenshot of your work for this lesson.
+                </div>
               </div>
 
-              {selectedScreenshot && (
-                <span
-                  style={{
-                    background: pastel.amberSoft,
-                    color: "#92400e",
-                    borderRadius: 999,
-                    padding: "10px 14px",
-                    fontWeight: 800,
-                  }}
-                >
-                  Screenshot saved
-                </span>
-              )}
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                flexWrap: "wrap",
-                marginBottom: 18,
-              }}
-            >
               <label
                 style={{
                   display: "inline-block",
-                  padding: "14px 20px",
-                  background: "white",
-                  color: pastel.title,
-                  borderRadius: 14,
+                  borderRadius: 16,
+                  padding: "12px 16px",
+                  background: pastel.panelLilac,
                   border: `1px solid ${pastel.border}`,
                   fontWeight: 800,
-                  fontSize: 16,
+                  color: pastel.title,
                   cursor: "pointer",
                 }}
               >
-                Choose Image
+                Upload Image
                 <input
                   type="file"
-                  accept="image/png,image/jpeg,image/webp"
+                  accept="image/*"
                   onChange={handleScreenshotUpload}
                   style={{ display: "none" }}
                 />
               </label>
-
-              {selectedScreenshot && (
-                <button
-                  onClick={clearScreenshot}
-                  style={{
-                    padding: "14px 20px",
-                    background: "#fff1f2",
-                    color: pastel.rose,
-                    borderRadius: 14,
-                    border: "1px solid #fecdd3",
-                    cursor: "pointer",
-                    fontWeight: 800,
-                    fontSize: 16,
-                  }}
-                >
-                  Remove Screenshot
-                </button>
-              )}
-            </div>
-
-            <div style={{ fontSize: 14, color: "#78716c", marginBottom: 18 }}>
-              Accepted: PNG, JPG, WEBP • Maximum size: 2MB
             </div>
 
             {selectedScreenshot ? (
-              <div
-                style={{
-                  background: "white",
-                  border: `1px solid ${pastel.border}`,
-                  borderRadius: 20,
-                  padding: 16,
-                }}
-              >
+              <div style={{ display: "grid", gap: 16 }}>
                 <img
                   src={selectedScreenshot}
-                  alt={`Scratch project screenshot for ${selectedLesson.title}`}
+                  alt={`Lesson ${selectedLesson.id} screenshot`}
                   style={{
                     width: "100%",
-                    maxHeight: 500,
+                    maxHeight: 420,
                     objectFit: "contain",
-                    borderRadius: 14,
-                    display: "block",
-                    background: "#f8fafc",
+                    borderRadius: 18,
+                    border: `1px solid ${pastel.border}`,
+                    background: "#ffffff",
                   }}
                 />
+
+                <div>
+                  <button
+                    onClick={clearScreenshot}
+                    style={{
+                      border: "1px solid #fecdd3",
+                      background: "#fff1f2",
+                      color: "#be123c",
+                      borderRadius: 16,
+                      padding: "12px 16px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Remove Screenshot
+                  </button>
+                </div>
               </div>
             ) : (
               <div
                 style={{
-                  border: "2px dashed #fdba74",
-                  borderRadius: 20,
-                  padding: 28,
-                  background: "rgba(255,255,255,0.7)",
-                  color: "#9a3412",
-                  fontSize: 17,
+                  border: `1px dashed ${pastel.border}`,
+                  borderRadius: 18,
+                  padding: 20,
+                  background: pastel.slateSoft,
+                  color: "#64748b",
                 }}
               >
                 No screenshot uploaded yet for this lesson.
@@ -3443,41 +3485,190 @@ export default function Home() {
 
           <div
             style={{
-              background: pastel.panelLilac,
+              background: pastel.panel,
               border: `1px solid ${pastel.border}`,
               borderRadius: 24,
-              padding: 26,
+              padding: 24,
               boxShadow: pastel.shadow,
             }}
           >
-            <h3
+            <div
               style={{
-                fontSize: 30,
-                marginTop: 0,
-                marginBottom: 14,
-                color: pastel.title,
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 12,
+                alignItems: "center",
+                flexWrap: "wrap",
+                marginBottom: 18,
               }}
             >
-              Key Vocabulary
-            </h3>
-
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              {selectedLesson.vocab.map((word) => (
-                <span
-                  key={word}
+              <div>
+                <div
                   style={{
-                    background: "rgba(255,255,255,0.75)",
-                    border: `1px solid ${pastel.border}`,
-                    padding: "10px 16px",
-                    borderRadius: 999,
-                    fontSize: 17,
-                    fontWeight: 700,
-                    color: pastel.title,
+                    fontSize: 13,
+                    fontWeight: 800,
+                    color: pastel.accent,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    marginBottom: 8,
                   }}
                 >
-                  {word}
-                </span>
+                  Quiz
+                </div>
+                <div style={{ color: "#475569" }}>
+                  10 questions • randomised answers • one submission only
+                </div>
+              </div>
+
+              {submittedResult?.submitted ? (
+                <div
+                  style={{
+                    background:
+                      scorePercent >= 80 ? "#dcfce7" : scorePercent >= 60 ? "#fef3c7" : "#fee2e2",
+                    border:
+                      scorePercent >= 80
+                        ? "1px solid #86efac"
+                        : scorePercent >= 60
+                        ? "1px solid #fcd34d"
+                        : "1px solid #fca5a5",
+                    color:
+                      scorePercent >= 80 ? "#166534" : scorePercent >= 60 ? "#92400e" : "#b91c1c",
+                    borderRadius: 18,
+                    padding: "12px 16px",
+                    fontWeight: 800,
+                  }}
+                >
+                  {submittedResult.score}/{quiz.length} • {scorePercent}% •{" "}
+                  {getMasteryText(submittedResult.score, quiz.length)}
+                </div>
+              ) : null}
+            </div>
+
+            <div style={{ display: "grid", gap: 18 }}>
+              {quiz.map((question, questionIndex) => (
+                <div
+                  key={`${selectedLesson.id}-question-${questionIndex}`}
+                  style={{
+                    border: `1px solid ${pastel.border}`,
+                    borderRadius: 20,
+                    padding: 18,
+                    background: "#ffffff",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 800,
+                      color: pastel.title,
+                      fontSize: 18,
+                      lineHeight: 1.5,
+                      marginBottom: 14,
+                    }}
+                  >
+                    {questionIndex + 1}. {question.prompt}
+                  </div>
+
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {question.options.map((option, optionIndex) => {
+                      const selected = selectedAnswers[questionIndex] === optionIndex;
+                      const submitted = submittedResult?.submitted;
+                      const selectedOriginalIndex = submittedResult?.submitted
+                        ? question.originalOptionIndexes[submittedResult.answers[questionIndex]]
+                        : null;
+                      const thisOriginalIndex = question.originalOptionIndexes[optionIndex];
+                      const isCorrect = submitted && thisOriginalIndex === question.answer;
+                      const isWrongChosen =
+                        submitted &&
+                        selectedOriginalIndex !== null &&
+                        submittedResult.answers[questionIndex] === optionIndex &&
+                        selectedOriginalIndex !== question.answer;
+
+                      return (
+                        <button
+                          key={`${selectedLesson.id}-${questionIndex}-${optionIndex}`}
+                          onClick={() => chooseAnswer(questionIndex, optionIndex)}
+                          style={{
+                            textAlign: "left",
+                            padding: "14px 16px",
+                            borderRadius: 16,
+                            border: isCorrect
+                              ? "1px solid #86efac"
+                              : isWrongChosen
+                              ? "1px solid #fca5a5"
+                              : selected
+                              ? "1px solid #c4b5fd"
+                              : `1px solid ${pastel.border}`,
+                            background: isCorrect
+                              ? "#ecfdf5"
+                              : isWrongChosen
+                              ? "#fef2f2"
+                              : selected
+                              ? "#f5f3ff"
+                              : "#ffffff",
+                            color: pastel.title,
+                            cursor: submitted ? "default" : "pointer",
+                            fontWeight: selected ? 800 : 600,
+                          }}
+                          disabled={submitted}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {submittedResult?.submitted ? (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        padding: 12,
+                        borderRadius: 14,
+                        background: "#f8fafc",
+                        border: `1px solid ${pastel.border}`,
+                        color: "#475569",
+                        fontSize: 14,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      Correct answer:{" "}
+                      <strong>{question.options[question.originalOptionIndexes.indexOf(question.answer)]}</strong>
+                    </div>
+                  ) : null}
+                </div>
               ))}
+            </div>
+
+            <div style={{ marginTop: 18 }}>
+              {submittedResult?.submitted ? (
+                <div
+                  style={{
+                    background: pastel.panelBlue,
+                    border: `1px solid ${pastel.border}`,
+                    borderRadius: 18,
+                    padding: 16,
+                    color: pastel.title,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Quiz already submitted for this lesson. Retakes are disabled. Review the correct
+                  answers above and improve your work if needed.
+                </div>
+              ) : (
+                <button
+                  onClick={submitQuiz}
+                  style={{
+                    border: "none",
+                    background: "linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%)",
+                    color: "#ffffff",
+                    borderRadius: 16,
+                    padding: "14px 18px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    fontSize: 16,
+                  }}
+                >
+                  Submit Quiz
+                </button>
+              )}
             </div>
           </div>
         </section>
