@@ -34,15 +34,14 @@ type SortMode = "name" | "progress";
 type ActivityFilter = "all" | "active" | "not-started";
 
 const CLASS_OPTIONS = [
-  "Year 5 Eucalyptus",
-  "Year 5 Hawthorne",
-  "Year 5 Sycamore",
-  "Year 5 Willow",
-];
+  "Year 6 Elder",
+  "Year 6 Juniper",
+  "Year Walnut",
+  ];
 
-const REGISTRY_KEY = "year5-pupil-registry";
-const CURRENT_PROFILE_KEY = "year5-current-profile";
-const TEACHER_UNLOCKED_KEY = "year5-teacher-unlocked";
+const REGISTRY_KEY = "year6-pupil-registry";
+const CURRENT_PROFILE_KEY = "year6-current-profile";
+const TEACHER_UNLOCKED_KEY = "year6-teacher-unlocked";
 const TEACHER_PASSWORD = "APSR2026";
 const TOTAL_LESSONS = 12;
 
