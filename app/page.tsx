@@ -3010,6 +3010,11 @@ export default function Home() {
             boxShadow: pastel.shadow,
             position: "sticky",
             top: 20,
+            maxHeight: "calc(100vh - 40px)",
+            overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
+            paddingBottom: 32,
           }}
         >
           <div
