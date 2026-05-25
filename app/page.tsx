@@ -78,6 +78,7 @@ const CLASS_OPTIONS = ["Year 6 Elder", "Year 6 Juniper", "Year 6 Walnut"];
 
 const REGISTRY_KEY = "year6-pupil-registry";
 const CURRENT_PROFILE_KEY = "year6-current-profile";
+const DEFAULT_ACCESS_CODE = "123456";
 
 const pastel = {
   page: "#f8fafc",
@@ -1806,6 +1807,13 @@ function removeProfileFromRegistry(profile: LearnerProfile) {
   saveRegistry(filtered);
 }
 
+function withDefaultAccessCode(profile: LearnerProfile): LearnerProfile {
+  return {
+    ...profile,
+    accessCode: profile.accessCode?.trim() || DEFAULT_ACCESS_CODE,
+  };
+}
+
 function buildQuiz(lessonId: number): QuizQuestion[] {
   return quizBank[lessonId] || [];
 }
@@ -1957,13 +1965,17 @@ export default function Home() {
   const [registry, setRegistry] = useState<LearnerProfile[]>([]);
 
   useEffect(() => {
-    const loadedRegistry = getRegistry();
+    const loadedRegistry = getRegistry().map(withDefaultAccessCode);
+    saveRegistry(loadedRegistry);
     setRegistry(loadedRegistry);
 
     const savedProfile = localStorage.getItem(CURRENT_PROFILE_KEY);
     if (savedProfile) {
       try {
-        const parsed = JSON.parse(savedProfile) as LearnerProfile;
+        const parsed = withDefaultAccessCode(
+          JSON.parse(savedProfile) as LearnerProfile
+        );
+        localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(parsed));
         setProfile(parsed);
         setSetupClass(parsed.className);
         setSetupStudentName(parsed.studentName);
@@ -2127,11 +2139,7 @@ export default function Home() {
       return;
     }
 
-    const cleanAccessCode = setupAccessCode.trim();
-    if (cleanAccessCode.length < 4) {
-      alert("Please enter an access code with at least 4 characters.");
-      return;
-    }
+    const cleanAccessCode = setupAccessCode.trim() || DEFAULT_ACCESS_CODE;
 
     const storageKey = buildStorageKey(setupClass, cleanName);
     const newProfile: LearnerProfile = {
@@ -2155,17 +2163,24 @@ export default function Home() {
   };
 
   const openExistingPupil = (selectedProfile: LearnerProfile) => {
-    const savedAccessCode = selectedProfile.accessCode;
+    const profileWithCode = withDefaultAccessCode(selectedProfile);
+    const savedAccessCode = profileWithCode.accessCode || DEFAULT_ACCESS_CODE;
     const enteredAccessCode = accessCodeInputs[selectedProfile.storageKey]?.trim() || "";
 
-    if (savedAccessCode && enteredAccessCode !== savedAccessCode) {
+    if (enteredAccessCode !== savedAccessCode) {
       alert("Please enter the correct access code for this pupil.");
       return;
     }
-    setProfile(selectedProfile);
-    setSetupClass(selectedProfile.className);
-    setSetupStudentName(selectedProfile.studentName);
-    setExistingClass(selectedProfile.className);
+    saveRegistry(
+      getRegistry().map((item) =>
+        item.storageKey === profileWithCode.storageKey ? profileWithCode : item
+      )
+    );
+    setRegistry(getRegistry());
+    setProfile(profileWithCode);
+    setSetupClass(profileWithCode.className);
+    setSetupStudentName(profileWithCode.studentName);
+    setExistingClass(profileWithCode.className);
   };
 
   const switchLearner = () => {
@@ -2578,7 +2593,7 @@ export default function Home() {
                 <input
                   value={setupAccessCode}
                   onChange={(event) => setSetupAccessCode(event.target.value)}
-                  placeholder="Choose a code pupils can remember"
+                  placeholder="Default: 123456"
                   style={{
                     padding: "14px 16px",
                     borderRadius: 14,
@@ -2688,30 +2703,28 @@ export default function Home() {
                       </div>
 
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                        {item.accessCode && (
-                          <input
-                            type="password"
-                            value={accessCodeInputs[item.storageKey] || ""}
-                            onChange={(event) =>
-                              setAccessCodeInputs((prev) => ({
-                                ...prev,
-                                [item.storageKey]: event.target.value,
-                              }))
-                            }
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") openExistingPupil(item);
-                            }}
-                            placeholder="Access code"
-                            style={{
-                              width: 150,
-                              padding: "10px 12px",
-                              borderRadius: 999,
-                              border: `1px solid ${pastel.border}`,
-                              fontWeight: 700,
-                              outline: "none",
-                            }}
-                          />
-                        )}
+                        <input
+                          type="password"
+                          value={accessCodeInputs[item.storageKey] || ""}
+                          onChange={(event) =>
+                            setAccessCodeInputs((prev) => ({
+                              ...prev,
+                              [item.storageKey]: event.target.value,
+                            }))
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") openExistingPupil(item);
+                          }}
+                          placeholder="Access code"
+                          style={{
+                            width: 150,
+                            padding: "10px 12px",
+                            borderRadius: 999,
+                            border: `1px solid ${pastel.border}`,
+                            fontWeight: 700,
+                            outline: "none",
+                          }}
+                        />
                         <button
                           onClick={() => openExistingPupil(item)}
                           style={{
