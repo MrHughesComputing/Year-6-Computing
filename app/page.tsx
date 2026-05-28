@@ -107,7 +107,7 @@ const pastel = {
   shadow: "0 10px 30px rgba(148, 163, 184, 0.14)",
 };
 
-const lessons: Lesson[] = [
+const baseLessons: Lesson[] = [
   {
     id: 1,
     week: 1,
@@ -649,6 +649,226 @@ const lessons: Lesson[] = [
     projectLink: "https://makecode.microbit.org/",
   },
 ];
+
+const year6ScratchGameLessons: Record<number, Partial<Lesson>> = {
+  8: {
+    platform: "Scratch",
+    title: "Planning a Simple Game",
+    shortTitle: "Game Rules",
+    description:
+      "Designing a Scratch game with clear rules, a player, a target, and hazards.",
+    objective:
+      "I can plan a simple Scratch game that uses score, lives, and health variables.",
+    overview:
+      "A game needs clear rules before it is coded. Score tracks success, lives track chances, and health can show how strong the player is during the game.",
+    whyItMatters:
+      "Planning first makes the Scratch project easier to build, test, and improve because each variable has a clear purpose.",
+    retrievalQuestion:
+      "What variable did you use in Summer Term 1, and how could it help in a game?",
+    teachingPoints: [
+      "Score usually increases when the player achieves something.",
+      "Lives usually decrease after a mistake or collision.",
+      "Health can decrease gradually and trigger game over when it reaches zero.",
+      "Good games have rules that can be explained before coding starts.",
+    ],
+    vocab: ["game", "rule", "score", "lives", "health", "variable"],
+    guidedSteps: [
+      "Open Scratch and start a new project.",
+      "Choose or draw a player sprite.",
+      "Choose a target sprite that the player can collect.",
+      "Choose a hazard sprite that the player should avoid.",
+      "Create three variables: score, lives, and health.",
+      "Write down the starting value for each variable.",
+      "Plan what changes each variable during the game.",
+      "Explain the win condition and the game over condition.",
+    ],
+    practiceTask:
+      "Plan a simple collect-and-avoid Scratch game with score, lives, and health variables.",
+    challengeTask:
+      "Add a bonus idea, such as a power-up that restores health or gives extra score.",
+    keyQuestion: "Why should every variable in a game have a clear job?",
+    misconception:
+      "Variables are not just labels on the screen. They store values that control what happens in the game.",
+    correctOutcome:
+      "The pupil can explain the game rules and how score, lives, and health will change.",
+    wrongOutcome:
+      "The pupil chooses sprites but cannot explain the rules or what the variables do.",
+    projectLink: "https://scratch.mit.edu/",
+  },
+  9: {
+    platform: "Scratch",
+    title: "Player Movement and Boundaries",
+    shortTitle: "Move the Player",
+    description:
+      "Building player controls and keeping the sprite inside the game area.",
+    objective:
+      "I can code player movement and use conditions to control boundaries.",
+    overview:
+      "The player sprite needs reliable controls. Conditions can stop the player leaving the screen or trigger a response when touching the edge.",
+    whyItMatters:
+      "A game feels fairer and easier to play when the player controls are predictable.",
+    retrievalQuestion: "Which Scratch blocks can detect keyboard input?",
+    teachingPoints: [
+      "Events can start movement code.",
+      "Keyboard controls can change x and y positions.",
+      "Conditions can check whether the player is touching the edge.",
+      "Testing movement early prevents bigger problems later.",
+    ],
+    vocab: ["event", "movement", "x position", "y position", "condition", "boundary"],
+    guidedSteps: [
+      "Open the Scratch game project from last lesson.",
+      "Select the player sprite.",
+      "Use when green flag clicked to set the starting position.",
+      "Add keyboard controls using arrow keys or WASD.",
+      "Test that the player moves up, down, left, and right.",
+      "Add code to stop the player leaving the play area or bounce at the edge.",
+      "Test the controls slowly and then quickly.",
+      "Improve the speed if the game feels too fast or too slow.",
+    ],
+    practiceTask:
+      "Code a player sprite that moves smoothly and stays inside the play area.",
+    challengeTask: "Add a second control option, such as WASD as well as arrow keys.",
+    keyQuestion: "How do conditions help make movement safer and fairer?",
+    misconception:
+      "Movement is not finished just because the sprite moves once. It must be tested during real play.",
+    correctOutcome:
+      "The player sprite moves reliably and does not disappear off the screen.",
+    wrongOutcome:
+      "The player moves unpredictably or gets stuck because the controls have not been tested.",
+    projectLink: "https://scratch.mit.edu/",
+  },
+  10: {
+    platform: "Scratch",
+    title: "Score and Collecting",
+    shortTitle: "Score System",
+    description: "Using a score variable when the player collects a target.",
+    objective: "I can use a score variable to track points in a Scratch game.",
+    overview:
+      "Score gives the player a reason to keep playing. The game should increase score when the player collects the target and then move the target to a new position.",
+    whyItMatters:
+      "A clear score system gives useful feedback and makes the game goal obvious.",
+    retrievalQuestion:
+      "What should happen to the score when the player touches a collectible?",
+    teachingPoints: [
+      "Score should start at zero when the game begins.",
+      "Touching the collectible should change score by a set amount.",
+      "The collectible should move after it is collected.",
+      "A sound or visual effect can help show that points were earned.",
+    ],
+    vocab: ["score", "collectible", "collision", "random position", "feedback", "points"],
+    guidedSteps: [
+      "Create or select the target sprite.",
+      "Set score to 0 when the green flag is clicked.",
+      "Add a forever loop to the target sprite.",
+      "Use if touching player then to detect collection.",
+      "Change score by 1 when the target is collected.",
+      "Move the target to a random position after collection.",
+      "Add a short sound or costume change as feedback.",
+      "Test that one collection gives one point, not lots of accidental points.",
+    ],
+    practiceTask:
+      "Build a collectible target that increases score and moves to a new random position.",
+    challengeTask: "Make a rare bonus item that gives 5 points instead of 1.",
+    keyQuestion: "Why should score be reset when a new game starts?",
+    misconception:
+      "If the score keeps increasing too quickly, the collision code probably needs a wait or a target movement.",
+    correctOutcome:
+      "The score starts at zero, increases correctly, and the target moves after collection.",
+    wrongOutcome:
+      "The score changes without the player collecting anything or increases many times from one collision.",
+    projectLink: "https://scratch.mit.edu/",
+  },
+  11: {
+    platform: "Scratch",
+    title: "Lives, Health, and Hazards",
+    shortTitle: "Health and Lives",
+    description:
+      "Using health and lives variables when the player touches a hazard.",
+    objective:
+      "I can use health and lives variables to create risk in a Scratch game.",
+    overview:
+      "Hazards make the game more interesting. Health can decrease when the player is hit, and lives can decrease when health reaches zero.",
+    whyItMatters:
+      "Health and lives create challenge and help pupils understand how variables control game state.",
+    retrievalQuestion: "What is the difference between losing health and losing a life?",
+    teachingPoints: [
+      "Health can start at a value such as 100.",
+      "Lives can start at a value such as 3.",
+      "Touching a hazard can reduce health.",
+      "When health reaches zero, a life can be lost and health can reset.",
+    ],
+    vocab: ["lives", "health", "hazard", "damage", "reset", "game state"],
+    guidedSteps: [
+      "Create or select a hazard sprite.",
+      "Set lives to 3 and health to 100 when the game starts.",
+      "Make the hazard move or appear in a dangerous position.",
+      "Use if touching player then to detect damage.",
+      "Change health by -10 when the player touches the hazard.",
+      "Add a short wait so health does not drop too fast.",
+      "Use if health <= 0 then change lives by -1 and reset health to 100.",
+      "Test that health and lives change at the right time.",
+    ],
+    practiceTask: "Add a hazard that reduces health and causes the player to lose lives.",
+    challengeTask: "Make the hazard become faster when the score increases.",
+    keyQuestion:
+      "Why might a game use both health and lives instead of only one variable?",
+    misconception:
+      "A hazard should not remove all lives instantly unless that is an intentional rule.",
+    correctOutcome:
+      "Health decreases from hazards, lives decrease when health reaches zero, and the game remains playable.",
+    wrongOutcome:
+      "The player loses health too quickly or the variables do not reset correctly.",
+    projectLink: "https://scratch.mit.edu/",
+  },
+  12: {
+    platform: "Scratch",
+    title: "Finish and Test the Game",
+    shortTitle: "Final Game",
+    description:
+      "Completing, testing, and improving a Scratch game with score, lives, and health.",
+    objective:
+      "I can test and improve my Scratch game so the variables work correctly.",
+    overview:
+      "The final game should have a clear start, a playable challenge, working variables, and a game over or win condition.",
+    whyItMatters:
+      "Testing shows whether the rules are fair and whether the variables really control the game as intended.",
+    retrievalQuestion:
+      "How will you prove that score, lives, and health all work correctly?",
+    teachingPoints: [
+      "A good game starts with variables set to sensible values.",
+      "The player should understand how to win or lose.",
+      "Testing should check each variable separately.",
+      "Small improvements can make the game clearer and more enjoyable.",
+    ],
+    vocab: ["test", "debug", "win condition", "game over", "improve", "evaluate"],
+    guidedSteps: [
+      "Check that score, lives, and health all reset when the green flag is clicked.",
+      "Test collecting the target and record whether score changes correctly.",
+      "Test touching the hazard and record whether health changes correctly.",
+      "Test what happens when health reaches zero.",
+      "Test what happens when lives reaches zero.",
+      "Add a game over message or stop all scripts at the end.",
+      "Improve the instructions, backdrop, sprites, or difficulty.",
+      "Ask a partner to play and note one improvement.",
+    ],
+    practiceTask:
+      "Finish a playable Scratch game that uses score, lives, and health correctly.",
+    challengeTask: "Add a win condition such as reaching 20 points before lives reaches zero.",
+    keyQuestion: "What evidence shows that your game variables are working reliably?",
+    misconception:
+      "A game is not finished just because it runs once. It must be tested for different outcomes.",
+    correctOutcome:
+      "The game is playable and the pupil can explain how each variable affects the outcome.",
+    wrongOutcome:
+      "The game has sprites but the variables do not reset, update, or end the game reliably.",
+    projectLink: "https://scratch.mit.edu/",
+  },
+};
+
+const lessons: Lesson[] = baseLessons.map((lesson) => ({
+  ...lesson,
+  ...(year6ScratchGameLessons[lesson.id] || {}),
+}));
 
 const quizBank: Record<number, QuizQuestion[]> = {
   1: [
@@ -1832,8 +2052,146 @@ function withDefaultAccessCode(profile: LearnerProfile): LearnerProfile {
   };
 }
 
+const year6ScratchGameQuizBank: Record<number, QuizQuestion[]> = {
+  8: [
+    {
+      prompt: "What is the main job of the score variable in a game?",
+      options: ["To track points earned by the player", "To choose the backdrop", "To rename the sprite", "To stop all keyboard input"],
+      answer: 0,
+    },
+    {
+      prompt: "Why should lives and health have starting values?",
+      options: ["So the game begins in a fair and predictable state", "So the game has no rules", "So the player cannot lose", "So Scratch deletes old code"],
+      answer: 0,
+    },
+    {
+      prompt: "Which is a clear game rule?",
+      options: ["Collect stars to gain score", "Use any blocks randomly", "Hide all variables forever", "Never test the project"],
+      answer: 0,
+    },
+    {
+      prompt: "What should a hazard usually do?",
+      options: ["Make the player lose health or lives", "Always increase score", "Delete the backdrop", "Create a new pupil profile"],
+      answer: 0,
+    },
+    {
+      prompt: "Why is planning useful before coding?",
+      options: ["It makes each variable's job clear", "It removes the need to test", "It makes sprites move automatically", "It stops pupils using Scratch"],
+      answer: 0,
+    },
+  ],
+  9: [
+    {
+      prompt: "Which Scratch blocks are commonly used for player controls?",
+      options: ["Keyboard event blocks", "Sound effect blocks only", "Backdrop rename blocks", "Variable hide blocks only"],
+      answer: 0,
+    },
+    {
+      prompt: "What can x position control?",
+      options: ["Left and right movement", "The number of lives", "The project title", "The quiz score"],
+      answer: 0,
+    },
+    {
+      prompt: "What can y position control?",
+      options: ["Up and down movement", "The pupil name", "The browser size", "The teacher code"],
+      answer: 0,
+    },
+    {
+      prompt: "Why test player movement early?",
+      options: ["So control problems are found before the game gets bigger", "So the game ends immediately", "So score is hidden", "So variables are removed"],
+      answer: 0,
+    },
+    {
+      prompt: "What does a boundary rule help prevent?",
+      options: ["The player disappearing off the screen", "The score starting at zero", "The backdrop showing", "The project saving"],
+      answer: 0,
+    },
+  ],
+  10: [
+    {
+      prompt: "When should score usually be set to 0?",
+      options: ["When the green flag is clicked", "Only after game over", "Never", "When the browser closes"],
+      answer: 0,
+    },
+    {
+      prompt: "Which condition detects a collectible?",
+      options: ["if touching player then", "if username exists then", "if font is bold then", "if lesson is locked then"],
+      answer: 0,
+    },
+    {
+      prompt: "What should happen after the player collects a target?",
+      options: ["Score changes and the target moves", "The project deletes itself", "All variables become text", "The player cannot move"],
+      answer: 0,
+    },
+    {
+      prompt: "Why might a short wait be useful after collecting?",
+      options: ["To stop one touch counting many times too quickly", "To stop the green flag working", "To remove the target forever", "To hide the score"],
+      answer: 0,
+    },
+    {
+      prompt: "What is good feedback for earning points?",
+      options: ["A sound, costume change, or score update", "No visible change at all", "Deleting the score variable", "Changing the teacher dashboard"],
+      answer: 0,
+    },
+  ],
+  11: [
+    {
+      prompt: "What does health usually represent in a game?",
+      options: ["How much damage the player can take", "The class name", "The Scratch website address", "The sprite's costume list"],
+      answer: 0,
+    },
+    {
+      prompt: "What should touching a hazard usually do?",
+      options: ["Reduce health", "Always add 100 points", "Create a new backdrop", "Reset the pupil password"],
+      answer: 0,
+    },
+    {
+      prompt: "When might lives decrease?",
+      options: ["When health reaches zero", "Every time score increases", "When the target moves", "When the project opens"],
+      answer: 0,
+    },
+    {
+      prompt: "Why add a wait after hazard damage?",
+      options: ["So health does not drop too fast from one touch", "So the player gets unlimited score", "So all scripts stop forever", "So the hazard disappears from the editor"],
+      answer: 0,
+    },
+    {
+      prompt: "Why use both health and lives?",
+      options: ["Health tracks damage within a life, lives track remaining chances", "They always do exactly the same job", "They replace player movement", "They are only for decoration"],
+      answer: 0,
+    },
+  ],
+  12: [
+    {
+      prompt: "What should be tested when the green flag is clicked?",
+      options: ["Score, lives, and health reset correctly", "The browser history", "The teacher code", "The spreadsheet export"],
+      answer: 0,
+    },
+    {
+      prompt: "What is a win condition?",
+      options: ["A rule that decides when the player has succeeded", "A sprite costume only", "A random colour", "A password prompt"],
+      answer: 0,
+    },
+    {
+      prompt: "What is a game over condition?",
+      options: ["A rule that decides when the player has lost", "The name of the backdrop", "A type of screenshot", "A class list"],
+      answer: 0,
+    },
+    {
+      prompt: "Why should each variable be tested separately?",
+      options: ["So it is easier to find which part is broken", "So no one can play the game", "So score becomes a sprite", "So Scratch stops saving"],
+      answer: 0,
+    },
+    {
+      prompt: "What shows strong final evaluation?",
+      options: ["Explaining one improvement after testing the game", "Only saying it is finished", "Deleting all comments", "Changing the title without testing"],
+      answer: 0,
+    },
+  ],
+};
+
 function buildQuiz(lessonId: number): QuizQuestion[] {
-  return quizBank[lessonId] || [];
+  return year6ScratchGameQuizBank[lessonId] || quizBank[lessonId] || [];
 }
 
 function safeParseQuizOrderMap(raw: string | null): QuizOrderMap {
@@ -2603,7 +2961,7 @@ export default function Home() {
               APSR Year 6 Computing
             </h1>
             <p style={{ fontSize: 20, margin: 0, maxWidth: 860 }}>
-              Variables in Scratch and sensing with Micro:bit. Choose an existing
+              Variables in Scratch and simple game building. Choose an existing
               pupil or create a new pupil learning space on this browser, or open the teacher dashboard.
             </p>
           </div>
@@ -2954,7 +3312,7 @@ export default function Home() {
             </h1>
 
             <p style={{ fontSize: 22, margin: "0 0 12px" }}>
-              Variables in Scratch • Sensing with Micro:bit
+              Variables in Scratch • Simple Game Building
             </p>
 
             <div
@@ -3199,10 +3557,10 @@ export default function Home() {
             boxShadow: pastel.shadow,
             position: "sticky",
             top: 20,
-            maxHeight: "calc(100vh - 40px)",
-            overflowY: "auto",
-            WebkitOverflowScrolling: "touch",
-            overscrollBehavior: "contain",
+            maxHeight: "calc(100dvh - 40px)",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
             paddingBottom: 32,
           }}
         >
@@ -3235,50 +3593,59 @@ export default function Home() {
             </button>
           </div>
 
-          {(["Summer Term 1", "Summer Term 2"] as TermName[]).map((term) => (
-            <div key={term} style={{ marginBottom: 22 }}>
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 800,
-                  color: pastel.accent,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                  marginBottom: 10,
-                }}
-              >
-                {term}
-              </div>
+          <div
+            style={{
+              overflowY: "auto",
+              WebkitOverflowScrolling: "touch",
+              overscrollBehavior: "contain",
+              paddingRight: 4,
+              paddingBottom: 12,
+            }}
+          >
+            {(["Summer Term 1", "Summer Term 2"] as TermName[]).map((term) => (
+              <div key={term} style={{ marginBottom: 22 }}>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 800,
+                    color: pastel.accent,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    marginBottom: 10,
+                  }}
+                >
+                  {term}
+                </div>
 
-              <div style={{ display: "grid", gap: 10 }}>
-                {groupedLessons[term].map((lesson) => {
-                  const lessonQuizCount = buildQuiz(lesson.id).length;
-                  const stateLabel = getLessonStateLabel(
-                    lesson.id,
-                    completed,
-                    quizState,
-                    lessonQuizCount
-                  );
-                  const isSelected = lesson.id === selectedLessonId;
+                <div style={{ display: "grid", gap: 10 }}>
+                  {groupedLessons[term].map((lesson) => {
+                    const lessonQuizCount = buildQuiz(lesson.id).length;
+                    const stateLabel = getLessonStateLabel(
+                      lesson.id,
+                      completed,
+                      quizState,
+                      lessonQuizCount
+                    );
+                    const isSelected = lesson.id === selectedLessonId;
 
-                  return (
-                    <button
-                      key={lesson.id}
-                      onClick={() => setSelectedLessonId(lesson.id)}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        padding: 14,
-                        borderRadius: 18,
-                        border: isSelected
-                          ? "1px solid #c4b5fd"
-                          : `1px solid ${pastel.border}`,
-                        background: isSelected
-                          ? "linear-gradient(135deg, #ede9fe 0%, #dbeafe 100%)"
-                          : "#ffffff",
-                        cursor: "pointer",
-                      }}
-                    >
+                    return (
+                      <button
+                        key={lesson.id}
+                        onClick={() => setSelectedLessonId(lesson.id)}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: 14,
+                          borderRadius: 18,
+                          border: isSelected
+                            ? "1px solid #c4b5fd"
+                            : `1px solid ${pastel.border}`,
+                          background: isSelected
+                            ? "linear-gradient(135deg, #ede9fe 0%, #dbeafe 100%)"
+                            : "#ffffff",
+                          cursor: "pointer",
+                        }}
+                      >
                       <div
                         style={{
                           display: "flex",
@@ -3316,12 +3683,13 @@ export default function Home() {
                       <div style={{ fontSize: 14, color: "#475569", lineHeight: 1.45 }}>
                         {lesson.title}
                       </div>
-                    </button>
-                  );
-                })}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </aside>
 
         <section style={{ display: "grid", gap: 24 }}>
